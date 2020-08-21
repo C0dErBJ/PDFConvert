@@ -1,14 +1,16 @@
 package com.zjl.pdfconvert.exporter;
 
-import com.zjl.pdfconvert.model.Element;
 import com.zjl.pdfconvert.model.Fact;
+import com.zjl.pdfconvert.model.Image;
+import com.zjl.pdfconvert.model.style.Align;
 import com.zjl.pdfconvert.model.word.LineBreak;
+import com.zjl.pdfconvert.model.word.LineStart;
 import com.zjl.pdfconvert.model.word.Word;
-import com.zjl.pdfconvert.parser.Parser;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.*;
 
 import java.io.*;
-import java.util.List;
 
 /**
  * @author Zhu jialiang
@@ -17,16 +19,8 @@ import java.util.List;
 public class WordExporter implements Exporter {
     private ThreadLocal<XWPFDocument> document = new ThreadLocal<>();
     private String filePath;
-    private Parser parser;
-//    XWPFDocument doc = new XWPFDocument();
-//        try (FileOutputStream out = new FileOutputStream("C:\\01.Projects\\01.Code\\pdfconvert\\target\\simple.docx")) {
-//        doc.write(out);
-//    } catch (FileNotFoundException e) {
-//        e.printStackTrace();
-//    } catch (IOException e) {
-//        e.printStackTrace();
-//    }
-
+    private XWPFParagraph currentParagraph;
+    private XWPFRun currentXWPFRun;
 
     public WordExporter() {
         this.filePath = filePath;
@@ -39,29 +33,59 @@ public class WordExporter implements Exporter {
 
     @Override
     public void export(Fact fact) {
+        if (fact == null) {
+            return;
+        }
         if (this.document.get() == null) {
             XWPFDocument doc = new XWPFDocument();
             this.document.set(doc);
         }
-        XWPFRun run = null;
         if (document.get().getParagraphs().isEmpty()) {
-            run = this.document.get().createParagraph().createRun();
+            currentParagraph = this.document.get().createParagraph();
         } else {
-            run = this.document.get().getLastParagraph().createRun();
+            currentParagraph = this.document.get().getLastParagraph();
+        }
+        currentXWPFRun = currentParagraph.createRun();
+        if (fact instanceof LineStart) {
+            if (((LineStart) fact).getAlign() == Align.CENTER) {
+                currentParagraph.setAlignment(ParagraphAlignment.CENTER);
+            } else if (((LineStart) fact).getAlign() == Align.LEFT) {
+                currentParagraph.setAlignment(ParagraphAlignment.LEFT);
+            } else if (((LineStart) fact).getAlign() == Align.RIGHT) {
+                currentParagraph.setAlignment(ParagraphAlignment.RIGHT);
+            }
         }
 
         if (fact instanceof Word) {
-            run.setText(((Word) fact).getText());
-            run.setBold(((Word) fact).getStyle().isBold());
-            run.setItalic(((Word) fact).getStyle().isItalics());
-            run.setColor(((Word) fact).getStyle().getColor());
-            run.setFontFamily(((Word) fact).getStyle().getFontFamily());
-            run.setFontSize((int) ((Word) fact).getStyle().getFontSize());
+            System.out.print(((Word) fact).getText());
+            currentXWPFRun.setText(((Word) fact).getText());
+            currentXWPFRun.setBold(((Word) fact).getStyle().isBold());
+            currentXWPFRun.setItalic(((Word) fact).getStyle().isItalics());
+            currentXWPFRun.setColor(((Word) fact).getStyle().getColor());
+            currentXWPFRun.setFontFamily(((Word) fact).getStyle().getFontFamily());
+            currentXWPFRun.setFontSize((int) ((Word) fact).getStyle().getFontSize());
         }
         if (fact instanceof LineBreak) {
-            run.addCarriageReturn();
+            System.out.print("||");
+            currentXWPFRun.addCarriageReturn();
         }
+        if (fact instanceof Image) {
+            System.out.print("图片  ");
+            try {
+                try (ByteArrayInputStream bais = new ByteArrayInputStream(((Image) fact).getFile())) {
+                    XWPFPicture picture = currentXWPFRun.addPicture(bais,
+                            XWPFDocument.PICTURE_TYPE_PNG,
+                            ((Image) fact).getFileName(),
+                            Units.toEMU(((Image) fact).getDisplayWidth()),
+                            Units.toEMU(((Image) fact).getDisplayHeight()));
 
+                }
+            } catch (InvalidFormatException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 

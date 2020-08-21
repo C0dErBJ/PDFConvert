@@ -1,6 +1,7 @@
 package com.zjl.pdfconvert.exporter;
 
 import com.zjl.pdfconvert.model.Fact;
+import com.zjl.pdfconvert.model.word.Word;
 import com.zjl.pdfconvert.parser.Parser;
 
 import java.util.Collections;
@@ -21,6 +22,7 @@ public class SyncPdfExecutor implements PdfExecutor {
     private String importFilePath;
     private String exportFilePath;
     private volatile boolean isParseFinished = false;
+    private final Object _lock = new Object();
 
     public SyncPdfExecutor(Parser parser, Exporter exporter) {
         this.pdfParser = parser;
@@ -42,7 +44,13 @@ public class SyncPdfExecutor implements PdfExecutor {
     private void init() {
         workQueue = new ArrayBlockingQueue<Runnable>(2);
         executor = new ThreadPoolExecutor(2, 5, 60,
-                TimeUnit.SECONDS, workQueue, r -> new Thread(r, "PDF-Parser"));
+                TimeUnit.SECONDS, workQueue, r -> {
+            Thread localThread = new Thread(r, "PDF-Parser");
+            localThread.setUncaughtExceptionHandler((t, e) -> {
+                System.out.println(e.getMessage());
+            });
+            return localThread;
+        });
 
     }
 
@@ -53,26 +61,21 @@ public class SyncPdfExecutor implements PdfExecutor {
 
     @Override
     public void doExport() {
-        try {
-            while (true) {
-                Fact fact = this.factBlockingDeque.takeLast();
-                this.exporter.export(fact);
-                if (isParseFinished && this.factBlockingDeque.isEmpty()) {
-                    break;
-                }
+        while (true) {
+            Fact fact = this.factBlockingDeque.poll();
+            this.exporter.export(fact);
+            if (isParseFinished && this.factBlockingDeque.isEmpty()) {
+                break;
             }
-            this.exporter.writeFile();
-            this.executor.shutdown();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
+        this.exporter.writeFile();
+        this.executor.shutdown();
     }
 
     @Override
     public void doParse() {
         List<Fact> facts = this.pdfParser.parse();
-        Collections.reverse(facts);
-        this.factBlockingDeque.addAll(facts);
+        facts.forEach(a -> this.factBlockingDeque.offer(a));
         this.isParseFinished = true;
     }
 

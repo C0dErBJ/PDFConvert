@@ -1,13 +1,16 @@
-package com.zjl.pdfconvert.parser;
+package com.zjl.pdfconvert.parser.text;
 
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.model.Style;
+import com.zjl.pdfconvert.model.style.Align;
 import com.zjl.pdfconvert.model.word.LineBreak;
+import com.zjl.pdfconvert.model.word.LineStart;
 import com.zjl.pdfconvert.model.word.Word;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.contentstream.operator.color.*;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 import org.apache.pdfbox.pdmodel.graphics.state.PDGraphicsState;
@@ -27,11 +30,11 @@ import java.util.List;
  * @author Zhu jialiang
  * @date 2020/8/14
  */
-public class CustomTextStripper extends PDFTextStripper {
+public class TextExtractor extends CustomPDFTextStripper {
     private List<Fact> words = new LinkedList<Fact>();
     private int cursor = 0;
 
-    public CustomTextStripper() throws IOException {
+    public TextExtractor() throws IOException {
         addOperator(new SetStrokingColor());
         addOperator(new SetStrokingColorSpace());
         addOperator(new SetNonStrokingColorSpace());
@@ -72,16 +75,35 @@ public class CustomTextStripper extends PDFTextStripper {
     }
 
     @Override
-    protected void writeString(String text, List<TextPosition> textPositions) throws IOException {
-        if (!text.isEmpty()) {
-            this.words.add(cursor + textPositions.size(), new LineBreak());
-            cursor += textPositions.size() + 1;
+    public void writeLine(List<CustomPDFTextStripper.WordWithTextPositions> line) throws IOException {
+        int numberOfStrings = line.size();
+        int textCount = 0;
+        LineStart ls = new LineStart();
+        if (line.get(0).getTextPositions().get(0).getX() != 0) {
+            ls.setAlign(Align.CENTER);
         }
-        super.writeString(text, textPositions);
+        this.words.add(new LineStart());
+        for (int i = 0; i < numberOfStrings; i++) {
+            WordWithTextPositions word = line.get(i);
+            textCount += word.getTextPositions().size();
+            super.writeString(word.getText(), word.getTextPositions());
+            if (i < numberOfStrings - 1) {
+                super.writeWordSeparator();
+            }
+        }
+        if (!line.isEmpty()) {
+            this.words.add(cursor + textCount, new LineBreak());
+            cursor += textCount + 1;
+        }
+        super.writeLine(line);
     }
-
 
     public List<Fact> getWords() {
         return this.words;
+    }
+
+    public void clearCache() {
+        this.words = new LinkedList<>();
+        this.cursor = 0;
     }
 }

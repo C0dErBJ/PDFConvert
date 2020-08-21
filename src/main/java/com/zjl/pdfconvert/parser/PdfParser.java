@@ -1,12 +1,11 @@
 package com.zjl.pdfconvert.parser;
 
 import com.zjl.pdfconvert.model.Fact;
-import org.apache.pdfbox.contentstream.operator.color.*;
-import org.apache.pdfbox.cos.COSName;
+import com.zjl.pdfconvert.parser.image.ImageExtractor;
+import com.zjl.pdfconvert.parser.text.TextExtractor;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPageTree;
-import org.apache.pdfbox.pdmodel.font.PDTrueTypeFont;
-import org.apache.pdfbox.pdmodel.font.encoding.Encoding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +17,7 @@ import java.util.List;
  * @date 2020/8/19
  */
 public class PdfParser implements Parser {
+    private final Logger logger = LoggerFactory.getLogger(PdfParser.class);
 
     private String filePath;
 
@@ -35,30 +35,33 @@ public class PdfParser implements Parser {
         List<Fact> facts = new ArrayList<>();
         try (PDDocument document = PDDocument.load(new File(filePath))) {
             int pages = document.getNumberOfPages();
-            CustomTextStripper stripper = null;
+            TextExtractor textExtractor = null;
             try {
-                stripper = new CustomTextStripper();
-                PDTrueTypeFont.load(document, new File("C:\\Windows\\Fonts\\simsunb.ttf"), Encoding.getInstance(COSName.WIN_ANSI_ENCODING));
+                textExtractor = new TextExtractor();
+                textExtractor.setSortByPosition(true);
             } catch (IOException e) {
                 e.printStackTrace();
                 return facts;
             }
+            ImageExtractor imageExtractor = new ImageExtractor();
+            for (int i = 0; i < pages; i++) {
+                textExtractor.setStartPage(i + 1);
+                textExtractor.setEndPage(Math.min(i + 1, pages - 1));
+                textExtractor.getText(document);
 
-            stripper.setSortByPosition(true);
-            stripper.setStartPage(1);
-            stripper.setEndPage(pages);
-            try {
-                stripper.getText(document);
-            } catch (IOException e) {
-                e.printStackTrace();
+                facts.addAll(textExtractor.getWords());
+                textExtractor.clearCache();
+
+                imageExtractor.processPage(document.getPage(i));
+                facts.addAll(imageExtractor.getImages());
+                imageExtractor.clearCache();
             }
-            facts = stripper.getWords();
+
         } catch (IOException e) {
             e.printStackTrace();
+
         }
         return facts;
 
     }
-
-
 }

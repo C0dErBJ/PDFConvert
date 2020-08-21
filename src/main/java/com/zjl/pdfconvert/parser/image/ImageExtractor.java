@@ -1,4 +1,4 @@
-package com.zjl.pdfconvert;
+package com.zjl.pdfconvert.parser.image;
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,6 +16,9 @@ package com.zjl.pdfconvert;
  * limitations under the License.
  */
 
+import com.zjl.pdfconvert.model.Fact;
+import com.zjl.pdfconvert.model.Image;
+import com.zjl.pdfconvert.model.Style;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -29,8 +32,10 @@ import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.contentstream.operator.OperatorName;
 import org.apache.pdfbox.contentstream.PDFStreamEngine;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.pdfbox.contentstream.operator.state.Concatenate;
@@ -39,20 +44,14 @@ import org.apache.pdfbox.contentstream.operator.state.Save;
 import org.apache.pdfbox.contentstream.operator.state.SetGraphicsStateParameters;
 import org.apache.pdfbox.contentstream.operator.state.SetMatrix;
 
-/**
- * This is an example on how to get the x/y coordinates of image locations.
- *
- * @author Ben Litchfield
- */
-public class PrintImageLocations extends PDFStreamEngine
-{
-    /**
-     * Default constructor.
-     *
-     * @throws IOException If there is an error loading text stripper properties.
-     */
-    public PrintImageLocations() throws IOException
-    {
+import javax.imageio.ImageIO;
+
+
+public class ImageExtractor extends PDFStreamEngine {
+    private List<Image> images = new ArrayList<>();
+
+
+    public ImageExtractor() throws IOException {
         addOperator(new Concatenate());
         addOperator(new DrawObject());
         addOperator(new SetGraphicsStateParameters());
@@ -61,38 +60,52 @@ public class PrintImageLocations extends PDFStreamEngine
         addOperator(new SetMatrix());
     }
 
+    public List<Image> getImages() {
+        return images;
+    }
+
+    public void clearCache() {
+        this.images = new ArrayList<>();
+    }
+
     /**
      * This is used to handle an operation.
      *
      * @param operator The operation to perform.
      * @param operands The list of arguments.
-     *
      * @throws IOException If there is an error processing the operation.
      */
     @Override
-    protected void processOperator( Operator operator, List<COSBase> operands) throws IOException
-    {
+    protected void processOperator(Operator operator, List<COSBase> operands) throws IOException {
         String operation = operator.getName();
-        if (OperatorName.DRAW_OBJECT.equals(operation))
-        {
-            COSName objectName = (COSName) operands.get( 0 );
-            PDXObject xobject = getResources().getXObject( objectName );
-            if( xobject instanceof PDImageXObject)
-            {
-                PDImageXObject image = (PDImageXObject)xobject;
-                int imageWidth = image.getWidth();
-                int imageHeight = image.getHeight();
-                System.out.println("*******************************************************************");
-                System.out.println("Found image [" + objectName.getName() + "]");
+        if (OperatorName.DRAW_OBJECT.equals(operation)) {
+            COSName objectName = (COSName) operands.get(0);
+            PDXObject xobject = getResources().getXObject(objectName);
+            if (xobject instanceof PDImageXObject) {
+                Image imageFact = new Image();
+                PDImageXObject image = (PDImageXObject) xobject;
+                imageFact.setHeight(image.getHeight());
+                imageFact.setWidth(image.getWidth());
+                imageFact.setFileName(objectName.getName());
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(image.getImage(), "PNG", baos);
+                imageFact.setFile(baos.toByteArray());
 
                 Matrix ctmNew = getGraphicsState().getCurrentTransformationMatrix();
                 float imageXScale = ctmNew.getScalingFactorX();
                 float imageYScale = ctmNew.getScalingFactorY();
+                imageFact.setDisplayWidth(ctmNew.getScalingFactorX());
+                imageFact.setDisplayHeight(ctmNew.getScalingFactorY());
+                Style style = new Style();
+                style.setX(ctmNew.getTranslateX());
+                style.setY(ctmNew.getTranslateY());
+                imageFact.setStyle(style);
+                this.images.add(imageFact);
+
+                System.out.println("with in PDF = " + imageFact.getWidth() + ", " + image.getHeight() + " in user space units");
 
                 // position in user space units. 1 unit = 1/72 inch at 72 dpi
                 System.out.println("position in PDF = " + ctmNew.getTranslateX() + ", " + ctmNew.getTranslateY() + " in user space units");
-                // raw size in pixels
-                System.out.println("raw image size  = " + imageWidth + ", " + imageHeight + " in pixels");
                 // displayed size in user space units
                 System.out.println("displayed size  = " + imageXScale + ", " + imageYScale + " in user space units");
                 // displayed size in inches at 72 dpi rendering
@@ -104,25 +117,14 @@ public class PrintImageLocations extends PDFStreamEngine
                 imageYScale *= 25.4;
                 System.out.println("displayed size  = " + imageXScale + ", " + imageYScale + " in millimeters at 72 dpi rendering");
                 System.out.println();
-            }
-            else if(xobject instanceof PDFormXObject)
-            {
-                PDFormXObject form = (PDFormXObject)xobject;
+            } else if (xobject instanceof PDFormXObject) {
+                PDFormXObject form = (PDFormXObject) xobject;
                 showForm(form);
             }
-        }
-        else
-        {
-            super.processOperator( operator, operands);
+        } else {
+            super.processOperator(operator, operands);
         }
     }
 
-    /**
-     * This will print the usage for this document.
-     */
-    private static void usage()
-    {
-        System.err.println( "Usage: java " + PrintImageLocations.class.getName() + " <input-pdf>" );
-    }
 
 }
