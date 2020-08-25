@@ -1,7 +1,5 @@
 package com.zjl.pdfconvert.model;
 
-import java.awt.*;
-
 /**
  * @author Zhu jialiang
  * @date 2020/8/17
@@ -13,9 +11,18 @@ public class Style {
     private boolean italics = false;
     private boolean underLine = false;
     private String color;
+    private String backgroundColor;
     private float x;
     private float y;
 
+
+    public String getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public void setBackgroundColor(String backgroundColor) {
+        this.backgroundColor = backgroundColor;
+    }
 
     public String getColor() {
         return color;

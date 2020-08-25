@@ -56,6 +56,7 @@ public class PdfParser implements Parser {
                 facts.addAll(imageExtractor.getImages());
                 imageExtractor.clearCache();
             }
+            System.out.println("------------解析完成-------------");
 
         } catch (IOException e) {
             e.printStackTrace();

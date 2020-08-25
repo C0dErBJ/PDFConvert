@@ -9,8 +9,13 @@ import com.zjl.pdfconvert.model.word.Word;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.*;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTShd;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STShd;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 /**
  * @author Zhu jialiang
@@ -40,34 +45,37 @@ public class WordExporter implements Exporter {
             XWPFDocument doc = new XWPFDocument();
             this.document.set(doc);
         }
-        if (document.get().getParagraphs().isEmpty()) {
-            currentParagraph = this.document.get().createParagraph();
-        } else {
-            currentParagraph = this.document.get().getLastParagraph();
-        }
-        currentXWPFRun = currentParagraph.createRun();
+
         if (fact instanceof LineStart) {
+            currentParagraph = this.document.get().createParagraph();
             if (((LineStart) fact).getAlign() == Align.CENTER) {
                 currentParagraph.setAlignment(ParagraphAlignment.CENTER);
-            } else if (((LineStart) fact).getAlign() == Align.LEFT) {
-                currentParagraph.setAlignment(ParagraphAlignment.LEFT);
             } else if (((LineStart) fact).getAlign() == Align.RIGHT) {
                 currentParagraph.setAlignment(ParagraphAlignment.RIGHT);
+            } else {
+                currentParagraph.setAlignment(ParagraphAlignment.LEFT);
             }
         }
-
+        if (document.get().getParagraphs().isEmpty()) {
+            currentParagraph = this.document.get().createParagraph();
+        }
+        currentXWPFRun = currentParagraph.createRun();
         if (fact instanceof Word) {
             System.out.print(((Word) fact).getText());
             currentXWPFRun.setText(((Word) fact).getText());
             currentXWPFRun.setBold(((Word) fact).getStyle().isBold());
             currentXWPFRun.setItalic(((Word) fact).getStyle().isItalics());
             currentXWPFRun.setColor(((Word) fact).getStyle().getColor());
+            CTShd cTShd=  currentXWPFRun.getCTR().addNewRPr().addNewShd();
+            cTShd.setVal(STShd.CLEAR);
+            cTShd.setColor("auto");
+            cTShd.setFill(((Word) fact).getStyle().getBackgroundColor());
             currentXWPFRun.setFontFamily(((Word) fact).getStyle().getFontFamily());
             currentXWPFRun.setFontSize((int) ((Word) fact).getStyle().getFontSize());
         }
         if (fact instanceof LineBreak) {
             System.out.print("||");
-            currentXWPFRun.addCarriageReturn();
+          //  currentXWPFRun.addCarriageReturn();
         }
         if (fact instanceof Image) {
             System.out.print("图片  ");

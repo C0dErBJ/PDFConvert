@@ -674,7 +674,7 @@ public class CustomPDFTextStripper extends CustomLegacyPDFStreamEngine {
      * @param second   The second number to compare to.
      * @param variance The allowed variance.
      */
-    private boolean within(float first, float second, float variance) {
+    public boolean within(float first, float second, float variance) {
         return second < first + variance && second > first - variance;
     }
 

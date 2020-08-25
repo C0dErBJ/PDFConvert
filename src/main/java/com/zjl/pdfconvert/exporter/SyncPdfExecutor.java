@@ -1,10 +1,8 @@
 package com.zjl.pdfconvert.exporter;
 
 import com.zjl.pdfconvert.model.Fact;
-import com.zjl.pdfconvert.model.word.Word;
 import com.zjl.pdfconvert.parser.Parser;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -62,7 +60,7 @@ public class SyncPdfExecutor implements PdfExecutor {
     @Override
     public void doExport() {
         while (true) {
-            Fact fact = this.factBlockingDeque.poll();
+            Fact fact = this.factBlockingDeque.pollFirst();
             this.exporter.export(fact);
             if (isParseFinished && this.factBlockingDeque.isEmpty()) {
                 break;
@@ -75,7 +73,16 @@ public class SyncPdfExecutor implements PdfExecutor {
     @Override
     public void doParse() {
         List<Fact> facts = this.pdfParser.parse();
-        facts.forEach(a -> this.factBlockingDeque.offer(a));
+        for (int i = 0; i < facts.size(); i++) {
+            if (facts.get(i) == null) {
+                System.out.println("队列内包含null值");
+                System.out.println(i + "前值" + facts.get(i - 1));
+            }
+            this.factBlockingDeque.offerLast(facts.get(i));
+        }
+        facts.forEach(a -> {
+
+        });
         this.isParseFinished = true;
     }
 
