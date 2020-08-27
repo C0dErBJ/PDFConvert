@@ -2,6 +2,7 @@ package com.zjl.pdfconvert.parser;
 
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.parser.image.ImageExtractor;
+import com.zjl.pdfconvert.parser.table.TableExtractor;
 import com.zjl.pdfconvert.parser.text.TextExtractor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.slf4j.Logger;
@@ -44,23 +45,35 @@ public class PdfParser implements Parser {
                 return facts;
             }
             ImageExtractor imageExtractor = new ImageExtractor();
+            TableExtractor tableExtractor = new TableExtractor();
             for (int i = 0; i < pages; i++) {
                 textExtractor.setStartPage(i + 1);
-                textExtractor.setEndPage(Math.min(i + 1, pages - 1));
+                textExtractor.setEndPage(Math.min(i + 1, pages));
                 textExtractor.getText(document);
 
-                facts.addAll(textExtractor.getWords());
-                textExtractor.clearCache();
+                List<Fact> words = textExtractor.getWords();
+                facts.addAll(words);
+
 
                 imageExtractor.processPage(document.getPage(i));
                 facts.addAll(imageExtractor.getImages());
+
+
+                tableExtractor.processPage(document.getPage(i));
+                if (tableExtractor.hasTable()) {
+                    List<Fact> tableFacts = tableExtractor.concatWordCell(facts, i + 1);
+                    facts.addAll(tableExtractor.getTables());
+                }
+
                 imageExtractor.clearCache();
+                textExtractor.clearCache();
+                tableExtractor.clearCache();
             }
             System.out.println("------------解析完成-------------");
 
         } catch (IOException e) {
             e.printStackTrace();
-
+            System.out.println(e);
         }
         return facts;
 

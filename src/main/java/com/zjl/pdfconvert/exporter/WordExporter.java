@@ -3,6 +3,7 @@ package com.zjl.pdfconvert.exporter;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.model.Image;
 import com.zjl.pdfconvert.model.style.Align;
+import com.zjl.pdfconvert.model.table.Table;
 import com.zjl.pdfconvert.model.word.LineBreak;
 import com.zjl.pdfconvert.model.word.LineStart;
 import com.zjl.pdfconvert.model.word.Word;
@@ -66,7 +67,7 @@ public class WordExporter implements Exporter {
             currentXWPFRun.setBold(((Word) fact).getStyle().isBold());
             currentXWPFRun.setItalic(((Word) fact).getStyle().isItalics());
             currentXWPFRun.setColor(((Word) fact).getStyle().getColor());
-            CTShd cTShd=  currentXWPFRun.getCTR().addNewRPr().addNewShd();
+            CTShd cTShd = currentXWPFRun.getCTR().addNewRPr().addNewShd();
             cTShd.setVal(STShd.CLEAR);
             cTShd.setColor("auto");
             cTShd.setFill(((Word) fact).getStyle().getBackgroundColor());
@@ -75,9 +76,32 @@ public class WordExporter implements Exporter {
         }
         if (fact instanceof LineBreak) {
             System.out.print("||");
-          //  currentXWPFRun.addCarriageReturn();
+            //  currentXWPFRun.addCarriageReturn();
+        }
+        if (fact instanceof Table) {
+            if (!currentParagraph.isEmpty()) {
+                currentParagraph = this.document.get().createParagraph();
+            }
+            XWPFTable table = this.document.get().createTable();
+            XWPFTableRow row = table.getRow(0);
+            for (int i = 0; i < ((Table) fact).getRowCount(); i++) {
+                if (i != 0) {
+                    row = table.createRow();
+                }
+                for (int j = 0; j < ((Table) fact).getColumnCount(); j++) {
+                    if (j == 0 || i != 0) {
+                        row.getCell(j).setText(((Table) fact).getCells()[i][j].getText());
+                    }
+                    if (i == 0 && j != 0) {
+                        row.addNewTableCell().setText(((Table) fact).getCells()[i][j].getText());
+                    }
+                }
+            }
         }
         if (fact instanceof Image) {
+            if (!currentParagraph.isEmpty()) {
+                currentParagraph = this.document.get().createParagraph();
+            }
             System.out.print("图片  ");
             try {
                 try (ByteArrayInputStream bais = new ByteArrayInputStream(((Image) fact).getFile())) {

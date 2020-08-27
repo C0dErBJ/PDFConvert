@@ -18,7 +18,7 @@ public class PdfConvertApplication {
     public static void main(String[] args) {
         //   SpringApplication.run(PdfConvertApplication.class, args);
         PdfParser pdfParser = new PdfParser();
-        pdfParser.setFilePath("C:\\Users\\Zhu jialiang\\Desktop\\这.pdf");
+        pdfParser.setFilePath("C:\\Users\\Zhu jialiang\\Desktop\\a.pdf");
         Exporter exporter = new WordExporter();
         exporter.setFilePath("C:\\Users\\Zhu jialiang\\Desktop\\word.docx");
         SyncPdfExecutor syncPdfExecutor = new SyncPdfExecutor(pdfParser, exporter);

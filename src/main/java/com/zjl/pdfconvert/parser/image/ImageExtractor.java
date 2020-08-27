@@ -97,8 +97,8 @@ public class ImageExtractor extends PDFStreamEngine {
                 imageFact.setDisplayWidth(ctmNew.getScalingFactorX());
                 imageFact.setDisplayHeight(ctmNew.getScalingFactorY());
                 Style style = new Style();
-                style.setX(ctmNew.getTranslateX());
-                style.setY(ctmNew.getTranslateY());
+                style.setX((int)ctmNew.getTranslateX());
+                style.setY((int)ctmNew.getTranslateY());
                 imageFact.setStyle(style);
                 this.images.add(imageFact);
 

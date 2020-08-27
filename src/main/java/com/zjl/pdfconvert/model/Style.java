@@ -12,9 +12,27 @@ public class Style {
     private boolean underLine = false;
     private String color;
     private String backgroundColor;
-    private float x;
-    private float y;
+    private int x;
+    private int y;
+    private int abx;
+    private int aby;
 
+
+    public float getAbx() {
+        return abx;
+    }
+
+    public void setAbx(int abx) {
+        this.abx = abx;
+    }
+
+    public int getAby() {
+        return aby;
+    }
+
+    public void setAby(int aby) {
+        this.aby = aby;
+    }
 
     public String getBackgroundColor() {
         return backgroundColor;
@@ -36,7 +54,7 @@ public class Style {
         return x;
     }
 
-    public void setX(float x) {
+    public void setX(int x) {
         this.x = x;
     }
 
@@ -44,7 +62,7 @@ public class Style {
         return y;
     }
 
-    public void setY(float y) {
+    public void setY(int y) {
         this.y = y;
     }
 

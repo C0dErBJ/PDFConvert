@@ -8,6 +8,15 @@ import com.zjl.pdfconvert.model.Element;
  */
 public class Word extends Element {
     private String text;
+    private int lineIndex;
+
+    public int getLineIndex() {
+        return lineIndex;
+    }
+
+    public void setLineIndex(int lineIndex) {
+        this.lineIndex = lineIndex;
+    }
 
     public String getText() {
         return text;

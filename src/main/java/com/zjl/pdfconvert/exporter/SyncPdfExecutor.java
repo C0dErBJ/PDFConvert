@@ -45,7 +45,9 @@ public class SyncPdfExecutor implements PdfExecutor {
                 TimeUnit.SECONDS, workQueue, r -> {
             Thread localThread = new Thread(r, "PDF-Parser");
             localThread.setUncaughtExceptionHandler((t, e) -> {
-                System.out.println(e.getMessage());
+                synchronized (System.out) {
+                    System.out.println(e.getMessage());
+                }
             });
             return localThread;
         });
@@ -80,9 +82,7 @@ public class SyncPdfExecutor implements PdfExecutor {
             }
             this.factBlockingDeque.offerLast(facts.get(i));
         }
-        facts.forEach(a -> {
-
-        });
+        System.out.println("------------推送完成-------------");
         this.isParseFinished = true;
     }
 
