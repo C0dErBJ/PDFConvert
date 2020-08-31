@@ -71,7 +71,7 @@ public class WordExporter implements Exporter {
             cTShd.setVal(STShd.CLEAR);
             cTShd.setColor("auto");
             cTShd.setFill(((Word) fact).getStyle().getBackgroundColor());
-            currentXWPFRun.setFontFamily(((Word) fact).getStyle().getFontFamily());
+            currentXWPFRun.setFontFamily(((Word) fact).getStyle().getFontFamily().getName());
             currentXWPFRun.setFontSize((int) ((Word) fact).getStyle().getFontSize());
         }
         if (fact instanceof LineBreak) {

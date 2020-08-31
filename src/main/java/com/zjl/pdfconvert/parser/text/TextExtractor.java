@@ -21,6 +21,7 @@ import com.zjl.pdfconvert.model.Element;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.model.Style;
 import com.zjl.pdfconvert.model.style.Align;
+import com.zjl.pdfconvert.model.word.FontName;
 import com.zjl.pdfconvert.model.word.LineBreak;
 import com.zjl.pdfconvert.model.word.LineStart;
 import com.zjl.pdfconvert.model.word.Word;
@@ -70,6 +71,15 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
     private float padLeft = 0;
     private float padRight = 0;
     private int currentLineIndex = 0;
+    private FontName defaultFont = FontName.SimSun;
+
+    public FontName getDefaultFont() {
+        return defaultFont;
+    }
+
+    public void setDefaultFont(String defaultEnFontName) {
+        this.defaultFont = FontName.fromEnName(defaultEnFontName);
+    }
 
     // enable the ability to set the default indent/drop thresholds
     // with -D system properties:
@@ -198,7 +208,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         PDFontDescriptor fontDescriptor = text.getFont().getFontDescriptor();
         style.setBold(fontDescriptor.isForceBold());
         style.setItalics(fontDescriptor.isItalic());
-        style.setFontFamily(text.getFont().getFontDescriptor().getFontFamily());
+        style.setFontFamily(text.getFont().getFontDescriptor().getFontFamily() == null ? defaultFont : FontName.fromEnName(text.getFont().getFontDescriptor().getFontFamily()));
         style.setFontSize(text.getFontSize());
         style.setX((int) text.getXDirAdj());
         style.setY((int) text.getYDirAdj());
@@ -220,14 +230,14 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         for (WordWithTextPositions word : line) {
             cursor += word.getTextPositions().size();
             // todo 这个逻辑有待商榷
-            if (word.getText().trim().isEmpty()) {
-                blankStrCount++;
-            }
+//            if (word.getText().trim().isEmpty()) {
+//                blankStrCount++;
+//            }
         }
         //todo 这个逻辑有待商榷，空行的换行会被忽略，强制记录
-        if (blankStrCount == numberOfStrings) {
-            cursor++;
-        }
+//        if (blankStrCount == numberOfStrings) {
+//            cursor++;
+//        }
         //禁止套娃😂
         TextPosition lastWordOfLine = line.get(line.size() - 1).getTextPositions()
                 .get(line.get(line.size() - 1).getTextPositions().size() - 1);

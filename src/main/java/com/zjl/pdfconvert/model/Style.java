@@ -1,11 +1,13 @@
 package com.zjl.pdfconvert.model;
 
+import com.zjl.pdfconvert.model.word.FontName;
+
 /**
  * @author Zhu jialiang
  * @date 2020/8/17
  */
 public class Style {
-    private String fontFamily = "";
+    private FontName fontFamily;
     private float fontSize = 12;
     private boolean bold = false;
     private boolean italics = false;
@@ -66,11 +68,11 @@ public class Style {
         this.y = y;
     }
 
-    public String getFontFamily() {
+    public FontName getFontFamily() {
         return fontFamily;
     }
 
-    public void setFontFamily(String fontFamily) {
+    public void setFontFamily(FontName fontFamily) {
         this.fontFamily = fontFamily;
     }
 

@@ -1,11 +1,13 @@
 package com.zjl.pdfconvert.parser.table;
 
+import com.zjl.pdfconvert.model.Style;
 import com.zjl.pdfconvert.model.table.Cell;
 import org.apache.pdfbox.contentstream.operator.MissingOperandException;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.contentstream.operator.graphics.GraphicsOperatorProcessor;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSNumber;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -15,13 +17,11 @@ import java.util.*;
  * @author Zhu jialiang
  * @date 2020/8/25
  */
-public class CustomAppendRectangleToPath extends GraphicsOperatorProcessor {
+public class AppendHighlightPath extends GraphicsOperatorProcessor {
     private List<Cell> currentCell = new LinkedList<>();
     private TreeMap<Integer, List<Cell>> preCells = new TreeMap<>();
-    //待优化，现在通过判断矩形四个点来计算是否是矩形
-    private int rectCount;
 
-    public CustomAppendRectangleToPath() {
+    public AppendHighlightPath() {
     }
 
     public void clearCache() {
@@ -41,6 +41,9 @@ public class CustomAppendRectangleToPath extends GraphicsOperatorProcessor {
             float x1 = x.intValue();
             float y1 = y.intValue();
             float variance = this.context.getGraphicsState().getLineWidth();
+            PDColor strokingColor = this.context.getGraphicsState().getStrokingColor();
+            float[] rgb = strokingColor.getComponents();
+
             Point2D p0 = this.context.transformedPoint(x1, y1);
             if (w.intValue() == 0 || h.intValue() == 0) {
                 return;
@@ -61,6 +64,13 @@ public class CustomAppendRectangleToPath extends GraphicsOperatorProcessor {
                 cell.setHeight(h.intValue());
                 //这个线宽其实有问题，取得只是连接左下角点的线，不一定准确
                 cell.setLineWidth((int) variance);
+                Style style = new Style();
+                if (rgb.length == 3) {
+                    style.setColor(String.format("%02x", (int) (rgb[0] * 255))
+                            + String.format("%02x", (int) (rgb[1] * 255))
+                            + String.format("%02x", (int) (rgb[2] * 255)));
+                }
+                cell.setStyle(style);
                 currentCell.add(cell);
             }
 

@@ -4,7 +4,10 @@ import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.parser.image.ImageExtractor;
 import com.zjl.pdfconvert.parser.table.TableExtractor;
 import com.zjl.pdfconvert.parser.text.TextExtractor;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +43,18 @@ public class PdfParser implements Parser {
             try {
                 textExtractor = new TextExtractor();
                 textExtractor.setSortByPosition(true);
+                if (document.getNumberOfPages() > 0) {
+                    PDResources res = document.getPage(0).getResources();
+                    for (COSName fontName : res.getFontNames()) {
+                        PDFont font = res.getFont(fontName);
+                        if (font != null) {
+                            String[] fName = font.getName().split("\\+");
+                            textExtractor.setDefaultFont(fName[fName.length - 1]);
+                            break;
+                        }
+                    }
+                }
+
             } catch (IOException e) {
                 e.printStackTrace();
                 return facts;
@@ -47,6 +62,7 @@ public class PdfParser implements Parser {
             ImageExtractor imageExtractor = new ImageExtractor();
             TableExtractor tableExtractor = new TableExtractor();
             for (int i = 0; i < pages; i++) {
+
                 textExtractor.setStartPage(i + 1);
                 textExtractor.setEndPage(Math.min(i + 1, pages));
                 textExtractor.getText(document);

@@ -2,21 +2,16 @@ package com.zjl.pdfconvert.parser.table;
 
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.model.table.Cell;
-import com.zjl.pdfconvert.model.table.Table;
 import com.zjl.pdfconvert.model.word.LineBreak;
 import com.zjl.pdfconvert.model.word.LineStart;
 import com.zjl.pdfconvert.model.word.Word;
-import com.zjl.pdfconvert.parser.text.TextExtractor;
 import org.apache.pdfbox.contentstream.PDFGraphicsStreamEngine;
 import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImage;
 
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
@@ -26,34 +21,19 @@ import java.util.stream.Collectors;
  * @author Zhu jialiang
  * @date 2020/8/25
  */
-public class TableExtractor extends PDFGraphicsStreamEngine {
+public class HighlightExtractor extends PDFGraphicsStreamEngine {
     private final GeneralPath linePath = new GeneralPath();
-    private List<Table> tables;
     private TreeMap<Integer, List<Cell>> cells;
-    private static float VARIANCE = 1f;
 
     private AppendCellPath appendCellPath = new AppendCellPath();
 
 
-    public TableExtractor() {
+    public HighlightExtractor() {
         super(null);
         addOperator(this.appendCellPath);
     }
 
-    public static void main(String[] args) throws IOException {
 
-        PDDocument document = PDDocument.load(new File("C:\\Users\\Zhu jialiang\\Desktop\\a.pdf"));
-
-//        PDFTextStripper stripper = new PDFTextStripper();
-//        System.out.println(stripper.getText(document));
-
-        TextExtractor extractor = new TextExtractor();
-        System.out.println(extractor.getText(document));
-
-        TableExtractor tableExtractor = new TableExtractor();
-        tableExtractor.processPage(document.getPage(0));
-        tableExtractor.getTables();
-    }
 
 
     @Override
@@ -63,7 +43,6 @@ public class TableExtractor extends PDFGraphicsStreamEngine {
 
     public void clearCache() {
         this.cells = null;
-        this.tables = null;
         this.appendCellPath.clearCache();
     }
 
@@ -71,28 +50,8 @@ public class TableExtractor extends PDFGraphicsStreamEngine {
         return !this.getCells().isEmpty();
     }
 
-    public List<Table> getTables() {
-        if (this.tables != null) {
-            return tables;
-        }
-        if (!this.hasTable()) {
-            return null;
-        }
 
-        List<Table> newTables = new ArrayList<>(this.getCells().keySet().size());
-
-        for (int i = 0; i < this.getCells().size(); i++) {
-            List<Cell> cellList = this.getCells().get(i);
-            int rowCount = cellList.stream().collect(Collectors.groupingBy(a -> a.getY())).keySet().size();
-            int columnCount = cellList.stream().collect(Collectors.groupingBy(a -> a.getX())).keySet().size();
-            Table table = new Table();
-            table.initTable(cellList, rowCount, columnCount);
-            newTables.add(table);
-        }
-        return this.tables = newTables;
-    }
-
-    public List<Fact> concatWordCell(List<Fact> words, int pageNo) {
+    public List<Fact> highlightWord(List<Fact> words, int pageNo) {
         TreeMap<Integer, List<Cell>> cells = this.getCells();
         List<Fact> facts = new LinkedList<>();
         for (int i = 0; i < cells.size(); i++) {
