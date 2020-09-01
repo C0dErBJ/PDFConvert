@@ -3,44 +3,34 @@ package com.zjl.pdfconvert.exporter;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.parser.Parser;
 
-import java.util.List;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 /**
  * @author Zhu jialiang
  * @date 2020/8/19
  */
-public class SyncPdfExecutor implements PdfExecutor {
-    private BlockingDeque<Fact> factBlockingDeque;
-    private Parser pdfParser;
-    private Exporter exporter;
+public class SyncPdfExecutor implements Executor {
     private ThreadPoolExecutor executor;
     private BlockingQueue<Runnable> workQueue;
+    private HashMap<String, ExportFileModel> result = new HashMap<>();
 
-    private String importFilePath;
-    private String exportFilePath;
-    private volatile boolean isParseFinished = false;
+    private volatile Boolean isParseFinished = false;
     private final Object _lock = new Object();
 
-    public SyncPdfExecutor(Parser parser, Exporter exporter) {
-        this.pdfParser = parser;
-        this.exporter = exporter;
-        this.factBlockingDeque = new LinkedBlockingDeque<>();
+    public SyncPdfExecutor() {
         this.init();
     }
 
-    public void setImportFilePath(String importFilePath) {
-        this.importFilePath = importFilePath;
-        this.pdfParser.setFilePath(importFilePath);
-    }
-
-    public void setExportFilePath(String exportFilePath) {
-        this.exportFilePath = exportFilePath;
-        this.exporter.setFilePath(exportFilePath);
-    }
-
     private void init() {
-        workQueue = new ArrayBlockingQueue<Runnable>(2);
+        workQueue = new ArrayBlockingQueue<Runnable>(6);
         executor = new ThreadPoolExecutor(2, 5, 60,
                 TimeUnit.SECONDS, workQueue, r -> {
             Thread localThread = new Thread(r, "PDF-Parser");
@@ -54,36 +44,42 @@ public class SyncPdfExecutor implements PdfExecutor {
 
     }
 
-    public void start() {
-        this.executor.submit(SyncPdfExecutor.this::doParse);
-        this.executor.submit(SyncPdfExecutor.this::doExport);
+    @Override
+    public String add(Parser parser, Exporter exporter) {
+        BlockingDeque<Fact> factBlockingDeque = new LinkedBlockingDeque<>();
+        parser.setFactBlockingDeque(factBlockingDeque);
+        exporter.setFactBlockingDeque(factBlockingDeque);
+        String uuid = UUID.randomUUID().toString();
+        exporter.setUniqueId(uuid);
+        CompletableFuture.runAsync(parser, executor);
+        CompletableFuture.runAsync(exporter, executor).whenComplete((unused, throwable) -> {
+            ByteArrayOutputStream bos = exporter.writeByte();
+            Path tempFile = null;
+            try {
+                tempFile = Files.createTempFile(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")), parser.getFileName());
+                Files.write(tempFile, bos.toByteArray());
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (bos != null) {
+                    try {
+                        bos.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            ExportFileModel file = new ExportFileModel();
+            file.setFileName(exporter.getFileName());
+            file.setFilePath(tempFile.toAbsolutePath().toString());
+            this.result.put(uuid, file);
+        });
+        return uuid;
     }
 
     @Override
-    public void doExport() {
-        while (true) {
-            Fact fact = this.factBlockingDeque.pollFirst();
-            this.exporter.export(fact);
-            if (isParseFinished && this.factBlockingDeque.isEmpty()) {
-                break;
-            }
-        }
-        this.exporter.writeFile();
-        this.executor.shutdown();
-    }
-
-    @Override
-    public void doParse() {
-        List<Fact> facts = this.pdfParser.parse();
-        for (int i = 0; i < facts.size(); i++) {
-            if (facts.get(i) == null) {
-                System.out.println("队列内包含null值");
-                System.out.println(i + "前值" + facts.get(i - 1));
-            }
-            this.factBlockingDeque.offerLast(facts.get(i));
-        }
-        System.out.println("------------推送完成-------------");
-        this.isParseFinished = true;
+    public ExportFileModel getExportFile(String uuid) {
+        return this.result.get(uuid);
     }
 
 

@@ -1,5 +1,7 @@
 package com.zjl.pdfconvert.parser;
 
+import com.zjl.pdfconvert.model.ArticleEnd;
+import com.zjl.pdfconvert.model.ArticleStart;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.parser.image.ImageExtractor;
 import com.zjl.pdfconvert.parser.table.TableExtractor;
@@ -11,10 +13,11 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingDeque;
 
 /**
  * @author Zhu jialiang
@@ -22,22 +25,37 @@ import java.util.List;
  */
 public class PdfParser implements Parser {
     private final Logger logger = LoggerFactory.getLogger(PdfParser.class);
-
-    private String filePath;
+    private BlockingDeque<Fact> factBlockingDeque;
+    private InputStream is;
+    private String fileName;
 
     public PdfParser() {
-        this.filePath = filePath;
+    }
+
+    public PdfParser(InputStream is) {
+        this.is = is;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+
+    @Override
+    public void setFactBlockingDeque(BlockingDeque<Fact> factBlockingDeque) {
+        this.factBlockingDeque = factBlockingDeque;
     }
 
     @Override
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
+    public void setInputStream(InputStream is) {
+        this.is = is;
     }
 
     @Override
     public List<Fact> parse() {
         List<Fact> facts = new ArrayList<>();
-        try (PDDocument document = PDDocument.load(new File(filePath))) {
+        facts.add(new ArticleStart());
+        try (PDDocument document = PDDocument.load(this.is)) {
             int pages = document.getNumberOfPages();
             TextExtractor textExtractor = null;
             try {
@@ -90,8 +108,35 @@ public class PdfParser implements Parser {
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println(e);
+        } finally {
+            if (this.is != null) {
+                try {
+                    this.is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+        facts.add(new ArticleEnd());
         return facts;
 
+    }
+
+    @Override
+    public String getFileName() {
+        return null;
+    }
+
+    @Override
+    public void run() {
+        List<Fact> facts = this.parse();
+        for (int i = 0; i < facts.size(); i++) {
+            if (facts.get(i) == null) {
+                System.out.println("队列内包含null值");
+                System.out.println(i + "前值" + facts.get(i - 1));
+            }
+            this.factBlockingDeque.offerLast(facts.get(i));
+        }
+        System.out.println("------------推送完成-------------");
     }
 }

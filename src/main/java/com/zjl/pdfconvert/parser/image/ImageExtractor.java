@@ -101,22 +101,6 @@ public class ImageExtractor extends PDFStreamEngine {
                 style.setY((int)ctmNew.getTranslateY());
                 imageFact.setStyle(style);
                 this.images.add(imageFact);
-
-                System.out.println("with in PDF = " + imageFact.getWidth() + ", " + image.getHeight() + " in user space units");
-
-                // position in user space units. 1 unit = 1/72 inch at 72 dpi
-                System.out.println("position in PDF = " + ctmNew.getTranslateX() + ", " + ctmNew.getTranslateY() + " in user space units");
-                // displayed size in user space units
-                System.out.println("displayed size  = " + imageXScale + ", " + imageYScale + " in user space units");
-                // displayed size in inches at 72 dpi rendering
-                imageXScale /= 72;
-                imageYScale /= 72;
-                System.out.println("displayed size  = " + imageXScale + ", " + imageYScale + " in inches at 72 dpi rendering");
-                // displayed size in millimeters at 72 dpi rendering
-                imageXScale *= 25.4;
-                imageYScale *= 25.4;
-                System.out.println("displayed size  = " + imageXScale + ", " + imageYScale + " in millimeters at 72 dpi rendering");
-                System.out.println();
             } else if (xobject instanceof PDFormXObject) {
                 PDFormXObject form = (PDFormXObject) xobject;
                 showForm(form);

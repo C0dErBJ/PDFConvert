@@ -1,5 +1,6 @@
 package com.zjl.pdfconvert.exporter;
 
+import com.zjl.pdfconvert.model.ArticleEnd;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.model.Image;
 import com.zjl.pdfconvert.model.style.Align;
@@ -13,28 +14,43 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTShd;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STShd;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * @author Zhu jialiang
  * @date 2020/8/17
  */
 public class WordExporter implements Exporter {
-    private ThreadLocal<XWPFDocument> document = new ThreadLocal<>();
-    private String filePath;
+    private XWPFDocument document = new XWPFDocument();
     private XWPFParagraph currentParagraph;
     private XWPFRun currentXWPFRun;
+    private BlockingDeque<Fact> factBlockingDeque;
+    private String uniqueId = "";
+    private String fileName;
 
     public WordExporter() {
-        this.filePath = filePath;
+        this.factBlockingDeque = new LinkedBlockingDeque<>();
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
 
     @Override
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
+    public void setFactBlockingDeque(BlockingDeque<Fact> factBlockingDeque) {
+        this.factBlockingDeque = factBlockingDeque;
+    }
+
+    @Override
+    public void setUniqueId(String id) {
+        this.uniqueId = id;
+    }
+
+    @Override
+    public String getFileName() {
+        return this.fileName + ".docx";
     }
 
     @Override
@@ -42,13 +58,12 @@ public class WordExporter implements Exporter {
         if (fact == null) {
             return;
         }
-        if (this.document.get() == null) {
-            XWPFDocument doc = new XWPFDocument();
-            this.document.set(doc);
+        if (this.document == null) {
+            this.document = new XWPFDocument();
         }
 
         if (fact instanceof LineStart) {
-            currentParagraph = this.document.get().createParagraph();
+            currentParagraph = this.document.createParagraph();
             if (((LineStart) fact).getAlign() == Align.CENTER) {
                 currentParagraph.setAlignment(ParagraphAlignment.CENTER);
             } else if (((LineStart) fact).getAlign() == Align.RIGHT) {
@@ -57,8 +72,8 @@ public class WordExporter implements Exporter {
                 currentParagraph.setAlignment(ParagraphAlignment.LEFT);
             }
         }
-        if (document.get().getParagraphs().isEmpty()) {
-            currentParagraph = this.document.get().createParagraph();
+        if (this.document.getParagraphs().isEmpty()) {
+            currentParagraph = this.document.createParagraph();
         }
         currentXWPFRun = currentParagraph.createRun();
         if (fact instanceof Word) {
@@ -80,9 +95,9 @@ public class WordExporter implements Exporter {
         }
         if (fact instanceof Table) {
             if (!currentParagraph.isEmpty()) {
-                currentParagraph = this.document.get().createParagraph();
+                currentParagraph = this.document.createParagraph();
             }
-            XWPFTable table = this.document.get().createTable();
+            XWPFTable table = this.document.createTable();
             XWPFTableRow row = table.getRow(0);
             for (int i = 0; i < ((Table) fact).getRowCount(); i++) {
                 if (i != 0) {
@@ -100,7 +115,7 @@ public class WordExporter implements Exporter {
         }
         if (fact instanceof Image) {
             if (!currentParagraph.isEmpty()) {
-                currentParagraph = this.document.get().createParagraph();
+                currentParagraph = this.document.createParagraph();
             }
             System.out.print("图片  ");
             try {
@@ -122,10 +137,10 @@ public class WordExporter implements Exporter {
     }
 
     @Override
-    public void writeFile() {
+    public void writeFile(String filePath) {
         try {
             FileOutputStream outputStream = new FileOutputStream(filePath);
-            this.document.get().write(outputStream);
+            this.document.write(outputStream);
             outputStream.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -134,5 +149,31 @@ public class WordExporter implements Exporter {
         }
     }
 
+    @Override
+    public ByteArrayOutputStream writeByte() {
+        ByteArrayOutputStream outputStream = null;
+        try {
+            outputStream = new ByteArrayOutputStream();
+            this.document.write(outputStream);
+            outputStream.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return outputStream;
+    }
 
+
+    @Override
+    public void run() {
+        while (true) {
+            Fact fact = this.factBlockingDeque.pollFirst();
+            this.export(fact);
+            if (fact instanceof ArticleEnd) {
+                System.out.println("----------end------------");
+                break;
+            }
+        }
+    }
 }
