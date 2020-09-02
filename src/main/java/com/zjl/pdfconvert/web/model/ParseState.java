@@ -12,11 +12,11 @@ import java.lang.reflect.Type;
  * @author Zhu jialiang
  * @date 2020/9/1
  */
-public enum ResultCode implements JSONSerializable {
-    SUCCESS(1), FAIL(0);
+public enum ParseState implements JSONSerializable {
+    PARSING(1), DONE(2);
     private int value;
 
-    ResultCode(int value) {
+    ParseState(int value) {
         this.value = value;
     }
     @JsonValue
@@ -27,7 +27,7 @@ public enum ResultCode implements JSONSerializable {
     @Override
     public void write(JSONSerializer jsonSerializer, Object o, Type type, int i) throws IOException {
         JSONObject object = new JSONObject();
-        object.put("resultCode", value);
+        object.put("parseState", value);
         jsonSerializer.write(object);
     }
 }

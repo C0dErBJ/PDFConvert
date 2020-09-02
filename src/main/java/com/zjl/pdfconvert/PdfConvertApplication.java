@@ -1,13 +1,15 @@
 package com.zjl.pdfconvert;
 
 
-import com.zjl.pdfconvert.exporter.Executor;
-import com.zjl.pdfconvert.exporter.SyncPdfExecutor;
-import com.zjl.pdfconvert.exporter.WordExporter;
-import com.zjl.pdfconvert.parser.PdfParser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.reactive.socket.WebSocketMessage;
+import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient;
+import org.springframework.web.reactive.socket.client.WebSocketClient;
+import reactor.core.publisher.Flux;
+
+import java.net.URI;
+import java.time.Duration;
 
 
 /**
@@ -18,6 +20,7 @@ public class PdfConvertApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(PdfConvertApplication.class, args);
+
     }
 
 }

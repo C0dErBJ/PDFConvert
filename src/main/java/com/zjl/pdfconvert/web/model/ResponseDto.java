@@ -4,10 +4,10 @@ package com.zjl.pdfconvert.web.model;
  * @author Zhu jialiang
  * @date 2020/9/1
  */
-public class ResponseDto {
+public class ResponseDto<T> {
     private ResultCode resultCode;
     private String message;
-    private String data;
+    private T data;
 
     public static ResponseDto success() {
         ResponseDto dto = new ResponseDto();
@@ -21,11 +21,11 @@ public class ResponseDto {
         return dto;
     }
 
-    public String getData() {
+    public T getData() {
         return data;
     }
 
-    public void setData(String data) {
+    public void setData(T data) {
         this.data = data;
     }
 
