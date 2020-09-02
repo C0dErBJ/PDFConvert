@@ -17,8 +17,11 @@ import reactor.core.publisher.Mono;
 @Component
 public class ReactiveWebSocketHandler implements WebSocketHandler {
 
-    @Autowired
-    private Executor executor;
+    private final Executor executor;
+
+    public ReactiveWebSocketHandler(Executor executor) {
+        this.executor = executor;
+    }
 
     @Override
     public Mono<Void> handle(WebSocketSession session) {
