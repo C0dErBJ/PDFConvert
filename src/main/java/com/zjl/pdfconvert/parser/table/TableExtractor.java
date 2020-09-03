@@ -6,31 +6,29 @@ import com.zjl.pdfconvert.model.table.Table;
 import com.zjl.pdfconvert.model.word.LineBreak;
 import com.zjl.pdfconvert.model.word.LineStart;
 import com.zjl.pdfconvert.model.word.Word;
-import com.zjl.pdfconvert.parser.text.TextExtractor;
+import com.zjl.pdfconvert.parser.Extractor;
 import org.apache.pdfbox.contentstream.PDFGraphicsStreamEngine;
 import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImage;
 
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * @author Zhu jialiang
  * @date 2020/8/25
  */
-public class TableExtractor extends PDFGraphicsStreamEngine {
+public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor<Table> {
     private final GeneralPath linePath = new GeneralPath();
     private List<Table> tables;
     private TreeMap<Integer, List<Cell>> cells;
     private static float VARIANCE = 1f;
+    private Integer pageIndex;
+    private PDPage currentPage;
 
     private AppendCellPath appendCellPath = new AppendCellPath();
 
@@ -40,30 +38,24 @@ public class TableExtractor extends PDFGraphicsStreamEngine {
         addOperator(this.appendCellPath);
     }
 
-    public static void main(String[] args) throws IOException {
-
-        PDDocument document = PDDocument.load(new File("C:\\Users\\Zhu jialiang\\Desktop\\a.pdf"));
-
-//        PDFTextStripper stripper = new PDFTextStripper();
-//        System.out.println(stripper.getText(document));
-
-        TextExtractor extractor = new TextExtractor();
-        System.out.println(extractor.getText(document));
-
-        TableExtractor tableExtractor = new TableExtractor();
-        tableExtractor.processPage(document.getPage(0));
-        tableExtractor.getTables();
-    }
-
 
     @Override
-    public void appendRectangle(Point2D p0, Point2D p1, Point2D p2, Point2D p3) throws IOException {
-
+    public Integer getOrder() {
+        return 3;
+    }
+    @Override
+    public void doExtract(PDPage page, int pageIndex) throws IOException {
+        this.pageIndex = pageIndex;
+        this.currentPage = page;
+        this.processPage(page);
     }
 
+    @Override
     public void clearCache() {
         this.cells = null;
         this.tables = null;
+        this.pageIndex = null;
+        this.currentPage = null;
         this.appendCellPath.clearCache();
     }
 
@@ -76,20 +68,26 @@ public class TableExtractor extends PDFGraphicsStreamEngine {
             return tables;
         }
         if (!this.hasTable()) {
-            return null;
+            return Collections.EMPTY_LIST;
         }
 
         List<Table> newTables = new ArrayList<>(this.getCells().keySet().size());
 
         for (int i = 0; i < this.getCells().size(); i++) {
             List<Cell> cellList = this.getCells().get(i);
-            int rowCount = cellList.stream().collect(Collectors.groupingBy(a -> a.getY())).keySet().size();
-            int columnCount = cellList.stream().collect(Collectors.groupingBy(a -> a.getX())).keySet().size();
+            int rowCount = cellList.stream().collect(Collectors.groupingBy(Cell::getY)).keySet().size();
+            int columnCount = cellList.stream().collect(Collectors.groupingBy(Cell::getX)).keySet().size();
             Table table = new Table();
             table.initTable(cellList, rowCount, columnCount);
             newTables.add(table);
         }
         return this.tables = newTables;
+    }
+
+    @Override
+    public List<Table> pipeline(List<Fact> currentFacts) {
+        this.concatWordCell(currentFacts, this.pageIndex);
+        return this.getTables();
     }
 
     public List<Fact> concatWordCell(List<Fact> words, int pageNo) {
@@ -124,6 +122,11 @@ public class TableExtractor extends PDFGraphicsStreamEngine {
         return this.cells;
     }
 
+
+    @Override
+    public void appendRectangle(Point2D point2D, Point2D point2D1, Point2D point2D2, Point2D point2D3) throws IOException {
+
+    }
 
     @Override
     public void drawImage(PDImage pdi) throws IOException {

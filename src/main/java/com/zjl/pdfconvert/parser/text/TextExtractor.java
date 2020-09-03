@@ -25,16 +25,18 @@ import com.zjl.pdfconvert.model.word.FontName;
 import com.zjl.pdfconvert.model.word.LineBreak;
 import com.zjl.pdfconvert.model.word.LineStart;
 import com.zjl.pdfconvert.model.word.Word;
+import com.zjl.pdfconvert.parser.Extractor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.pdfbox.contentstream.operator.color.*;
-import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageTree;
+import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
-import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem;
 import org.apache.pdfbox.pdmodel.interactive.pagenavigation.PDThreadBead;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
@@ -57,21 +59,24 @@ import java.util.regex.Pattern;
  *
  * @author Ben Litchfield
  */
-public class TextExtractor extends CustomLegacyPDFStreamEngine {
+public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extractor<Fact> {
     private static float defaultIndentThreshold = 2.0f;
     private static float defaultDropThreshold = 2.5f;
 
-    private static final Log LOG = LogFactory.getLog(PDFTextStripper.class);
+    private static final Log LOG = LogFactory.getLog(TextExtractor.class);
 
     //误差值，文本居中误差
-    private final static float VARIANCE = 15f;
-    private List<Fact> words = new LinkedList<Fact>();
+    private static final float VARIANCE = 15f;
+    private List<Fact> words = new LinkedList<>();
     private Deque<Fact> line = new ArrayDeque<>();
     private int cursor = 0;
     private float padLeft = 0;
     private float padRight = 0;
     private int currentLineIndex = 0;
-    private FontName defaultFont = FontName.SimSun;
+    private FontName defaultFont;
+    private PDPage currentPage;
+    private Integer pageIndex;
+
 
     public FontName getDefaultFont() {
         return defaultFont;
@@ -128,16 +133,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
     private String articleStart = "";
     private String articleEnd = "";
 
-    private int currentPageNo = 0;
-    private int startPage = 1;
-    private int endPage = Integer.MAX_VALUE;
-    private PDOutlineItem startBookmark = null;
 
-    // 1-based bookmark pages
-    private int startBookmarkPageNumber = -1;
-    private int endBookmarkPageNumber = -1;
-
-    private PDOutlineItem endBookmark = null;
     private boolean suppressDuplicateOverlappingText = true;
     private boolean shouldSeparateByBeads = true;
     private boolean sortByPosition = false;
@@ -170,8 +166,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
 
     private Map<String, TreeMap<Float, TreeSet<Float>>> characterListMapping = new HashMap<>();
 
-    protected PDDocument document;
-    protected Writer output;
 
     /**
      * True if we started a paragraph but haven't ended it yet.
@@ -183,7 +177,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      *
      * @throws IOException If there is an error loading the properties.
      */
-    public TextExtractor() throws IOException {
+    public TextExtractor() {
         addOperator(new SetStrokingColor());
         addOperator(new SetStrokingColorSpace());
         addOperator(new SetNonStrokingColorSpace());
@@ -199,11 +193,48 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         addOperator(new SetNonStrokingColorN());
     }
 
+    @Override
+    public void doExtract(PDPage page, int pageIndex) throws IOException {
+        this.currentPage = page;
+        this.pageIndex = pageIndex;
+        resetEngine();
+        if (getAddMoreFormatting()) {
+            paragraphEnd = lineSeparator;
+            pageStart = lineSeparator;
+            articleStart = lineSeparator;
+            articleEnd = lineSeparator;
+        }
+        if (this.getDefaultFont() == null) {
+            PDResources res = page.getResources();
+            for (COSName fontName : res.getFontNames()) {
+                PDFont font = res.getFont(fontName);
+                if (font != null) {
+                    String[] fName = font.getName().split("\\+");
+                    this.setDefaultFont(fName[fName.length - 1]);
+                    break;
+                }
+            }
+        }
+        if (page.hasContents()) {
+            processPage(page);
+        }
+    }
+
+    @Override
+    public List pipeline(List<Fact> facts) {
+        return this.getWords();
+    }
+
+    @Override
+    public Integer getOrder() {
+        return 1;
+    }
+
     public void processText(TextPosition text) {
         PDColor strokingColor = getGraphicsState().getStrokingColor();
         Word word = new Word();
         word.setText(text.getUnicode());
-        word.setPageNo(this.getCurrentPageNo());
+        word.setPageNo(this.pageIndex);
         Style style = new Style();
         PDFontDescriptor fontDescriptor = text.getFont().getFontDescriptor();
         style.setBold(fontDescriptor.isForceBold());
@@ -251,7 +282,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         LineStart ls = new LineStart();
         int lineIndex = this.currentLineIndex++;
         ls.setLineIndex(lineIndex);
-        ls.setPageNo(this.getCurrentPageNo());
+        ls.setPageNo(this.pageIndex);
         this.words.add(ls);
 
         Fact firstWord = this.line.peekFirst();
@@ -274,7 +305,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         LineBreak lb = new LineBreak();
         lb.setWord(lastWord == null ? firstWord : lastWord);
         lb.setLineIndex(lineIndex);
-        lb.setPageNo(this.getCurrentPageNo());
+        lb.setPageNo(this.pageIndex);
         this.words.add(lb);
 
         if (firstWord != null && within(((Word) (firstWord)).getStyle().getX(), padLeft, VARIANCE)) {
@@ -327,33 +358,14 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         return this.words;
     }
 
+    @Override
     public void clearCache() {
         this.words = new LinkedList<>();
+        this.resetEngine();
     }
 
-
-    /**
-     * This will return the text of a document. See writeText. <br>
-     * NOTE: The document must not be encrypted when coming into this method.
-     *
-     * <p>IMPORTANT: By default, text extraction is done in the same sequence as the text in the PDF page content stream.
-     * PDF is a graphic format, not a text format, and unlike HTML, it has no requirements that text one on page
-     * be rendered in a certain order. The order is the one that was determined by the software that created the
-     * PDF. To get text sorted from left to right and top to botton, use {@link #setSortByPosition(boolean)}.
-     *
-     * @param doc The document to get the text from.
-     * @return The text of the PDF document.
-     * @throws IOException if the doc state is invalid or it is encrypted.
-     */
-    public String getText(PDDocument doc) throws IOException {
-        StringWriter outputStream = new StringWriter();
-        writeText(doc, outputStream);
-        return outputStream.toString();
-    }
 
     private void resetEngine() {
-        currentPageNo = 0;
-        document = null;
         if (charactersByArticle != null) {
             charactersByArticle.clear();
         }
@@ -362,27 +374,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         }
     }
 
-    /**
-     * This will take a PDDocument and write the text of that document to the print writer.
-     *
-     * @param doc          The document to get the data from.
-     * @param outputStream The location to put the text.
-     * @throws IOException If the doc is in an invalid state.
-     */
-    public void writeText(PDDocument doc, Writer outputStream) throws IOException {
-        resetEngine();
-        document = doc;
-        output = outputStream;
-        if (getAddMoreFormatting()) {
-            paragraphEnd = lineSeparator;
-            pageStart = lineSeparator;
-            articleStart = lineSeparator;
-            articleEnd = lineSeparator;
-        }
-        startDocument(document);
-        processPages(document.getPages());
-        endDocument(document);
-    }
 
     /**
      * This will process all of the pages and the text that is in them.
@@ -391,62 +382,13 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      * @throws IOException If there is an error parsing the text.
      */
     protected void processPages(PDPageTree pages) throws IOException {
-        PDPage startBookmarkPage = startBookmark == null ? null
-                : startBookmark.findDestinationPage(document);
-        if (startBookmarkPage != null) {
-            startBookmarkPageNumber = pages.indexOf(startBookmarkPage) + 1;
-        } else {
-            // -1 = undefined
-            startBookmarkPageNumber = -1;
-        }
-
-        PDPage endBookmarkPage = endBookmark == null ? null
-                : endBookmark.findDestinationPage(document);
-        if (endBookmarkPage != null) {
-            endBookmarkPageNumber = pages.indexOf(endBookmarkPage) + 1;
-        } else {
-            // -1 = undefined
-            endBookmarkPageNumber = -1;
-        }
-
-        if (startBookmarkPageNumber == -1 && startBookmark != null && endBookmarkPageNumber == -1
-                && endBookmark != null
-                && startBookmark.getCOSObject() == endBookmark.getCOSObject()) {
-            // this is a special case where both the start and end bookmark
-            // are the same but point to nothing. In this case
-            // we will not extract any text.
-            startBookmarkPageNumber = 0;
-            endBookmarkPageNumber = 0;
-        }
-
         for (PDPage page : pages) {
-            currentPageNo++;
             if (page.hasContents()) {
                 processPage(page);
             }
         }
     }
 
-    /**
-     * This method is available for subclasses of this class. It will be called before processing of the document start.
-     *
-     * @param document The PDF document that is being processed.
-     * @throws IOException If an IO error occurs.
-     */
-    protected void startDocument(PDDocument document) throws IOException {
-        // no default implementation, but available for subclasses
-    }
-
-    /**
-     * This method is available for subclasses of this class. It will be called after processing of the document
-     * finishes.
-     *
-     * @param document The PDF document that is being processed.
-     * @throws IOException If an IO error occurs.
-     */
-    protected void endDocument(PDDocument document) throws IOException {
-        // no default implementation, but available for subclasses
-    }
 
     /**
      * This will process the contents of a page.
@@ -456,35 +398,29 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      */
     @Override
     public void processPage(PDPage page) throws IOException {
-        if (currentPageNo >= startPage && currentPageNo <= endPage
-                && (startBookmarkPageNumber == -1 || currentPageNo >= startBookmarkPageNumber)
-                && (endBookmarkPageNumber == -1 || currentPageNo <= endBookmarkPageNumber)) {
-            startPage(page);
 
-            int numberOfArticleSections = 1;
-            if (shouldSeparateByBeads) {
-                fillBeadRectangles(page);
-                numberOfArticleSections += beadRectangles.size() * 2;
-            }
-            int originalSize = charactersByArticle.size();
-            charactersByArticle.ensureCapacity(numberOfArticleSections);
-            int lastIndex = Math.max(numberOfArticleSections, originalSize);
-            for (int i = 0; i < lastIndex; i++) {
-                if (i < originalSize) {
-                    charactersByArticle.get(i).clear();
+        int numberOfArticleSections = 1;
+        if (shouldSeparateByBeads) {
+            fillBeadRectangles(page);
+            numberOfArticleSections += beadRectangles.size() * 2;
+        }
+        int originalSize = charactersByArticle.size();
+        charactersByArticle.ensureCapacity(numberOfArticleSections);
+        int lastIndex = Math.max(numberOfArticleSections, originalSize);
+        for (int i = 0; i < lastIndex; i++) {
+            if (i < originalSize) {
+                charactersByArticle.get(i).clear();
+            } else {
+                if (numberOfArticleSections < originalSize) {
+                    charactersByArticle.remove(i);
                 } else {
-                    if (numberOfArticleSections < originalSize) {
-                        charactersByArticle.remove(i);
-                    } else {
-                        charactersByArticle.add(new ArrayList<>());
-                    }
+                    charactersByArticle.add(new ArrayList<>());
                 }
             }
-            characterListMapping.clear();
-            super.processPage(page);
-            writePage();
-            endPage(page);
         }
+        characterListMapping.clear();
+        super.processPage(page);
+        writePage();
     }
 
     private void fillBeadRectangles(PDPage page) {
@@ -520,56 +456,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         }
     }
 
-    /**
-     * Start a new article, which is typically defined as a column on a single page (also referred to as a bead). This
-     * assumes that the primary direction of text is left to right. Default implementation is to do nothing. Subclasses
-     * may provide additional information.
-     *
-     * @throws IOException If there is any error writing to the stream.
-     */
-    protected void startArticle() throws IOException {
-        startArticle(true);
-    }
 
-    /**
-     * Start a new article, which is typically defined as a column on a single page (also referred to as a bead).
-     * Default implementation is to do nothing. Subclasses may provide additional information.
-     *
-     * @param isLTR true if primary direction of text is left to right.
-     * @throws IOException If there is any error writing to the stream.
-     */
-    protected void startArticle(boolean isLTR) throws IOException {
-        output.write(getArticleStart());
-    }
-
-    /**
-     * End an article. Default implementation is to do nothing. Subclasses may provide additional information.
-     *
-     * @throws IOException If there is any error writing to the stream.
-     */
-    protected void endArticle() throws IOException {
-        output.write(getArticleEnd());
-    }
-
-    /**
-     * Start a new page. Default implementation is to do nothing. Subclasses may provide additional information.
-     *
-     * @param page The page we are about to process.
-     * @throws IOException If there is any error writing to the stream.
-     */
-    protected void startPage(PDPage page) throws IOException {
-        // default is to do nothing
-    }
-
-    /**
-     * End a page. Default implementation is to do nothing. Subclasses may provide additional information.
-     *
-     * @param page The page we are about to process.
-     * @throws IOException If there is any error writing to the stream.
-     */
-    protected void endPage(PDPage page) throws IOException {
-        // default is to do nothing
-    }
 
     private static final float END_OF_LAST_TEXT_X_RESET_VALUE = -1;
     private static final float MAX_Y_FOR_LINE_RESET_VALUE = -Float.MAX_VALUE;
@@ -610,7 +497,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
                 QuickSort.sort(textList, comparator);
             }
 
-            startArticle();
             startOfArticle = true;
 
             // Now cycle through to print the text.
@@ -766,7 +652,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
                 writeLine(normalize(line));
                 writeParagraphEnd();
             }
-            endArticle();
         }
         writePageEnd();
     }
@@ -782,7 +667,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      * @throws IOException If there is a problem writing out the line separator to the document.
      */
     protected void writeLineSeparator() throws IOException {
-        output.write(getLineSeparator());
+//        output.write(getLineSeparator());
     }
 
     /**
@@ -791,7 +676,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      * @throws IOException If there is a problem writing out the word separator to the document.
      */
     protected void writeWordSeparator() throws IOException {
-        output.write(getWordSeparator());
+//        output.write(getWordSeparator());
     }
 
     /**
@@ -801,29 +686,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      * @throws IOException If there is an error when writing the text.
      */
     protected void writeCharacters(TextPosition text) throws IOException {
-        output.write(text.getUnicode());
-    }
-
-    /**
-     * Write a Java string to the output stream. The default implementation will ignore the <code>textPositions</code>
-     * and just calls {@link #writeString(String)}.
-     *
-     * @param text          The text to write to the stream.
-     * @param textPositions The TextPositions belonging to the text.
-     * @throws IOException If there is an error when writing the text.
-     */
-    protected void writeString(String text, List<TextPosition> textPositions) throws IOException {
-        writeString(text);
-    }
-
-    /**
-     * Write a Java string to the output stream.
-     *
-     * @param text The text to write to the stream.
-     * @throws IOException If there is an error when writing the text.
-     */
-    protected void writeString(String text) throws IOException {
-        output.write(text);
+//        output.write(text.getUnicode());
     }
 
     /**
@@ -966,46 +829,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
     }
 
     /**
-     * This is the page that the text extraction will start on. The pages start at page 1. For example in a 5 page PDF
-     * document, if the start page is 1 then all pages will be extracted. If the start page is 4 then pages 4 and 5 will
-     * be extracted. The default value is 1.
-     *
-     * @return Value of property startPage.
-     */
-    public int getStartPage() {
-        return startPage;
-    }
-
-    /**
-     * This will set the first page to be extracted by this class.
-     *
-     * @param startPageValue New value of 1-based startPage property.
-     */
-    public void setStartPage(int startPageValue) {
-        startPage = startPageValue;
-    }
-
-    /**
-     * This will get the last page that will be extracted. This is inclusive, for example if a 5 page PDF an endPage
-     * value of 5 would extract the entire document, an end page of 2 would extract pages 1 and 2. This defaults to
-     * Integer.MAX_VALUE such that all pages of the pdf will be extracted.
-     *
-     * @return Value of property endPage.
-     */
-    public int getEndPage() {
-        return endPage;
-    }
-
-    /**
-     * This will set the last page to be extracted by this class.
-     *
-     * @param endPageValue New value of 1-based endPage property.
-     */
-    public void setEndPage(int endPageValue) {
-        endPage = endPageValue;
-    }
-
-    /**
      * Set the desired line separator for output text. The line.separator system property is used if the line separator
      * preference is not set explicitly using this method.
      *
@@ -1053,24 +876,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
     }
 
     /**
-     * Get the current page number that is being processed.
-     *
-     * @return A 1 based number representing the current page.
-     */
-    protected int getCurrentPageNo() {
-        return currentPageNo;
-    }
-
-    /**
-     * The output stream that is being written to.
-     *
-     * @return The stream that output is being written to.
-     */
-    protected Writer getOutput() {
-        return output;
-    }
-
-    /**
      * Character strings are grouped by articles. It is quite common that there will only be a single article. This
      * returns a List that contains List objects, the inner lists will contain TextPosition objects.
      *
@@ -1107,42 +912,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      */
     public void setShouldSeparateByBeads(boolean aShouldSeparateByBeads) {
         shouldSeparateByBeads = aShouldSeparateByBeads;
-    }
-
-    /**
-     * Get the bookmark where text extraction should end, inclusive. Default is null.
-     *
-     * @return The ending bookmark.
-     */
-    public PDOutlineItem getEndBookmark() {
-        return endBookmark;
-    }
-
-    /**
-     * Set the bookmark where the text extraction should stop.
-     *
-     * @param aEndBookmark The ending bookmark.
-     */
-    public void setEndBookmark(PDOutlineItem aEndBookmark) {
-        endBookmark = aEndBookmark;
-    }
-
-    /**
-     * Get the bookmark where text extraction should start, inclusive. Default is null.
-     *
-     * @return The starting bookmark.
-     */
-    public PDOutlineItem getStartBookmark() {
-        return startBookmark;
-    }
-
-    /**
-     * Set the bookmark where text extraction should start, inclusive.
-     *
-     * @param aStartBookmark The starting bookmark.
-     */
-    public void setStartBookmark(PDOutlineItem aStartBookmark) {
-        startBookmark = aStartBookmark;
     }
 
     /**
@@ -1512,7 +1281,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
             writeParagraphEnd();
             inParagraph = false;
         }
-        output.write(getParagraphStart());
+//        output.write(getParagraphStart());
         inParagraph = true;
     }
 
@@ -1525,7 +1294,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
         if (!inParagraph) {
             writeParagraphStart();
         }
-        output.write(getParagraphEnd());
+//        output.write(getParagraphEnd());
         inParagraph = false;
     }
 
@@ -1535,7 +1304,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      * @throws IOException if something went wrong
      */
     protected void writePageStart() throws IOException {
-        output.write(getPageStart());
+//        output.write(getPageStart());
     }
 
     /**
@@ -1544,7 +1313,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      * @throws IOException if something went wrong
      */
     protected void writePageEnd() throws IOException {
-        output.write(getPageEnd());
+//        output.write(getPageEnd());
     }
 
     /**
@@ -1640,14 +1409,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine {
      */
     public void writeLine(List<WordWithTextPositions> line)
             throws IOException {
-        int numberOfStrings = line.size();
-        for (int i = 0; i < numberOfStrings; i++) {
-            WordWithTextPositions word = line.get(i);
-            writeString(word.getText(), word.getTextPositions());
-            if (i < numberOfStrings - 1) {
-                writeWordSeparator();
-            }
-        }
         processLine(line);
     }
 

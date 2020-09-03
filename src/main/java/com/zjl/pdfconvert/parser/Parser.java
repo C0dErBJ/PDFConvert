@@ -2,11 +2,9 @@ package com.zjl.pdfconvert.parser;
 
 import com.zjl.pdfconvert.model.Fact;
 
-import javax.annotation.security.RunAs;
 import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.Callable;
 
 /**
  * @author Zhu jialiang
@@ -14,12 +12,15 @@ import java.util.concurrent.Callable;
  */
 public interface Parser extends Runnable {
 
-    List<Fact> parse();
-
-    String getFileName();
+    List<Fact> doParse();
 
     void setFactBlockingDeque(BlockingDeque<Fact> factBlockingDeque);
 
     void setInputStream(InputStream is);
 
+    void addExtractor(Extractor extractor);
+
+    void removeExtractorByOrder(int order);
+
+    String getFileName();
 }

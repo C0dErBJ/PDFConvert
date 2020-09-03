@@ -12,7 +12,7 @@ import java.util.concurrent.Callable;
  */
 public interface Exporter extends Runnable {
 
-    void export(Fact fact);
+    void doExport(Fact fact);
 
     void writeFile(String filePath);
 

@@ -19,39 +19,33 @@ package com.zjl.pdfconvert.parser.image;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.model.Image;
 import com.zjl.pdfconvert.model.Style;
+import com.zjl.pdfconvert.parser.Extractor;
+import org.apache.pdfbox.contentstream.PDFStreamEngine;
+import org.apache.pdfbox.contentstream.operator.DrawObject;
+import org.apache.pdfbox.contentstream.operator.Operator;
+import org.apache.pdfbox.contentstream.operator.OperatorName;
+import org.apache.pdfbox.contentstream.operator.state.*;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.util.Matrix;
-import org.apache.pdfbox.contentstream.operator.DrawObject;
-import org.apache.pdfbox.contentstream.operator.Operator;
-import org.apache.pdfbox.contentstream.operator.OperatorName;
-import org.apache.pdfbox.contentstream.PDFStreamEngine;
 
+import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.pdfbox.contentstream.operator.state.Concatenate;
-import org.apache.pdfbox.contentstream.operator.state.Restore;
-import org.apache.pdfbox.contentstream.operator.state.Save;
-import org.apache.pdfbox.contentstream.operator.state.SetGraphicsStateParameters;
-import org.apache.pdfbox.contentstream.operator.state.SetMatrix;
 
-import javax.imageio.ImageIO;
-
-
-public class ImageExtractor extends PDFStreamEngine {
+public class ImageExtractor extends PDFStreamEngine implements Extractor<Image> {
     private List<Image> images = new ArrayList<>();
+    private Integer pageIndex;
+    private PDPage currentPage;
 
-
-    public ImageExtractor() throws IOException {
+    public ImageExtractor() {
         addOperator(new Concatenate());
         addOperator(new DrawObject());
         addOperator(new SetGraphicsStateParameters());
@@ -64,8 +58,16 @@ public class ImageExtractor extends PDFStreamEngine {
         return images;
     }
 
+    @Override
     public void clearCache() {
+        this.pageIndex = null;
+        this.currentPage = null;
         this.images = new ArrayList<>();
+    }
+
+    @Override
+    public List<Image> pipeline(List<Fact> facts) {
+        return this.getImages();
     }
 
     /**
@@ -97,8 +99,8 @@ public class ImageExtractor extends PDFStreamEngine {
                 imageFact.setDisplayWidth(ctmNew.getScalingFactorX());
                 imageFact.setDisplayHeight(ctmNew.getScalingFactorY());
                 Style style = new Style();
-                style.setX((int)ctmNew.getTranslateX());
-                style.setY((int)ctmNew.getTranslateY());
+                style.setX((int) ctmNew.getTranslateX());
+                style.setY((int) ctmNew.getTranslateY());
                 imageFact.setStyle(style);
                 this.images.add(imageFact);
             } else if (xobject instanceof PDFormXObject) {
@@ -110,5 +112,15 @@ public class ImageExtractor extends PDFStreamEngine {
         }
     }
 
+    @Override
+    public Integer getOrder() {
+        return 2;
+    }
 
+    @Override
+    public void doExtract(PDPage page, int pageIndex) throws IOException {
+        this.currentPage = page;
+        this.pageIndex = pageIndex;
+        this.processPage(page);
+    }
 }

@@ -1,5 +1,7 @@
-package com.zjl.pdfconvert.exporter;
+package com.zjl.pdfconvert.executor;
 
+import com.zjl.pdfconvert.exporter.ExportFileModel;
+import com.zjl.pdfconvert.exporter.Exporter;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.parser.Parser;
 
@@ -17,15 +19,13 @@ import java.util.concurrent.*;
  * @author Zhu jialiang
  * @date 2020/8/19
  */
-public class SyncPdfExecutor implements Executor {
+public class AsyncPdfExecutor implements AsyncExecutor {
     private ThreadPoolExecutor executor;
     private BlockingQueue<Runnable> workQueue;
     private HashMap<String, ExportFileModel> result = new HashMap<>();
 
-    private volatile Boolean isParseFinished = false;
-    private final Object _lock = new Object();
 
-    public SyncPdfExecutor() {
+    public AsyncPdfExecutor() {
         this.init();
     }
 
@@ -45,7 +45,7 @@ public class SyncPdfExecutor implements Executor {
     }
 
     @Override
-    public String add(Parser parser, Exporter exporter) {
+    public String doExecutor(Parser parser, Exporter exporter) {
         BlockingDeque<Fact> factBlockingDeque = new LinkedBlockingDeque<>();
         parser.setFactBlockingDeque(factBlockingDeque);
         exporter.setFactBlockingDeque(factBlockingDeque);

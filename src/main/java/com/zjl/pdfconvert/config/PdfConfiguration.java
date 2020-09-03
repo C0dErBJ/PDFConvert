@@ -1,8 +1,7 @@
 package com.zjl.pdfconvert.config;
 
-import com.zjl.pdfconvert.exporter.Executor;
-import com.zjl.pdfconvert.exporter.SyncPdfExecutor;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.zjl.pdfconvert.executor.AsyncExecutor;
+import com.zjl.pdfconvert.executor.AsyncPdfExecutor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.HandlerMapping;
@@ -10,7 +9,6 @@ import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.server.support.WebSocketHandlerAdapter;
 
-import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,12 +18,15 @@ import java.util.Map;
  */
 @Configuration
 public class PdfConfiguration {
-    @Autowired
-    private WebSocketHandler webSocketHandler;
+    private final WebSocketHandler webSocketHandler;
+
+    public PdfConfiguration(WebSocketHandler webSocketHandler) {
+        this.webSocketHandler = webSocketHandler;
+    }
 
     @Bean
-    public Executor executor() {
-        return new SyncPdfExecutor();
+    public AsyncExecutor executor() {
+        return new AsyncPdfExecutor();
     }
 
 

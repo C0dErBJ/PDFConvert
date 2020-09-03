@@ -54,7 +54,7 @@ public class WordExporter implements Exporter {
     }
 
     @Override
-    public void export(Fact fact) {
+    public void doExport(Fact fact) {
         if (fact == null) {
             return;
         }
@@ -117,7 +117,7 @@ public class WordExporter implements Exporter {
             if (!currentParagraph.isEmpty()) {
                 currentParagraph = this.document.createParagraph();
             }
-            System.out.print("图片  ");
+            System.out.print("图片");
             try {
                 try (ByteArrayInputStream bais = new ByteArrayInputStream(((Image) fact).getFile())) {
                     XWPFPicture picture = currentXWPFRun.addPicture(bais,
@@ -169,7 +169,7 @@ public class WordExporter implements Exporter {
     public void run() {
         while (true) {
             Fact fact = this.factBlockingDeque.pollFirst();
-            this.export(fact);
+            this.doExport(fact);
             if (fact instanceof ArticleEnd) {
                 System.out.println("----------end------------");
                 break;
