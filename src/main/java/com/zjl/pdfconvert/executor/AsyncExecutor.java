@@ -12,7 +12,11 @@ import com.zjl.pdfconvert.parser.Parser;
 public interface AsyncExecutor extends Executor<String> {
 
     @Override
-    String doExecutor(Parser parser, Exporter exporter) ;
+    String doExecutor(Parser parser, Exporter exporter);
 
     ExportFileModel getExportFile(String uuid);
+
+    void onComplete(ParseCompleteListener callBack);
+
+
 }

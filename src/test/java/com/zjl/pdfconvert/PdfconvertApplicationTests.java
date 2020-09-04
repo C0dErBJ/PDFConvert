@@ -1,5 +1,6 @@
 package com.zjl.pdfconvert;
 
+import com.zjl.pdfconvert.executor.AsyncPdfExecutor;
 import com.zjl.pdfconvert.executor.SimplePdfExecutor;
 import com.zjl.pdfconvert.exporter.Exporter;
 import com.zjl.pdfconvert.exporter.WordExporter;
@@ -16,7 +17,7 @@ import java.io.InputStream;
 class PdfconvertApplicationTests {
 
     @Test
-    void pdfParse() throws IOException {
+    void pdfParseSync() throws IOException {
         String importFile = "/test.pdf";
         try (InputStream is = PdfconvertApplicationTests.class.getResourceAsStream(importFile)) {
             Parser parser = new PdfParser();
@@ -29,4 +30,20 @@ class PdfconvertApplicationTests {
 
     }
 
+    @Test
+    void pdfParseASync() throws IOException {
+        String importFile = "/test.pdf";
+        try (InputStream is = PdfconvertApplicationTests.class.getResourceAsStream(importFile)) {
+            Parser parser = new PdfParser();
+            parser.setInputStream(is);
+            Exporter exporter = new WordExporter();
+            AsyncPdfExecutor executor = new AsyncPdfExecutor();
+            executor.onComplete(factList -> {
+                //½âÎö½á¹û
+            });
+            String uuid = executor.doExecutor(parser, exporter);
+            executor.getExportFile(uuid);
+        }
+
+    }
 }

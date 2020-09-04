@@ -25,6 +25,7 @@ public class PdfParser implements Parser {
     private InputStream is;
     private List<Extractor> extractors;
     private String fileName;
+    private List<Fact> parsedFacts;
 
     @Override
     public String getFileName() {
@@ -39,8 +40,14 @@ public class PdfParser implements Parser {
         this.init();
     }
 
+    @Override
+    public List<Fact> getParsedFacts() {
+        return parsedFacts;
+    }
+
     private void init() {
         this.extractors = new LinkedList<>();
+        this.parsedFacts = new ArrayList<>();
         TextExtractor textExtractor = new TextExtractor();
         textExtractor.setSortByPosition(true);
         this.extractors.add(textExtractor);
@@ -83,15 +90,15 @@ public class PdfParser implements Parser {
 
     @Override
     public List<Fact> doParse() {
-        List<Fact> facts = new ArrayList<>();
-        facts.add(new ArticleStart());
+
+        this.parsedFacts.add(new ArticleStart());
         try (PDDocument document = PDDocument.load(this.is)) {
             int pages = document.getNumberOfPages();
             for (int i = 0; i < pages; i++) {
                 for (Extractor extractor : this.extractors) {
                     extractor.doExtract(document.getPage(i), i);
-                    List factList = extractor.pipeline(facts);
-                    facts.addAll(factList);
+                    List factList = extractor.pipeline(this.parsedFacts);
+                    this.parsedFacts.addAll(factList);
                     extractor.clearCache();
                 }
             }
@@ -108,8 +115,8 @@ public class PdfParser implements Parser {
                 }
             }
         }
-        facts.add(new ArticleEnd());
-        return facts;
+        this.parsedFacts.add(new ArticleEnd());
+        return this.parsedFacts;
 
     }
 

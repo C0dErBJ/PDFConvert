@@ -24,6 +24,7 @@ public class AsyncPdfExecutor implements AsyncExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncPdfExecutor.class);
     private ThreadPoolExecutor executor;
     private final HashMap<String, ExportFileModel> result = new HashMap<>();
+    private ParseCompleteListener parseCompleteListener;
 
 
     public AsyncPdfExecutor() {
@@ -48,7 +49,9 @@ public class AsyncPdfExecutor implements AsyncExecutor {
         exporter.setFactBlockingDeque(factBlockingDeque);
         String uuid = UUID.randomUUID().toString();
         exporter.setUniqueId(uuid);
-        CompletableFuture.runAsync(parser, executor);
+        CompletableFuture.runAsync(parser, executor).whenComplete((unused, throwable) -> {
+            this.parseCompleteListener.onComplete(parser.getParsedFacts());
+        });
         CompletableFuture.runAsync(exporter, executor).whenComplete((unused, throwable) -> {
             byte[] bos = exporter.writeByte();
             Path tempFile = null;
@@ -73,6 +76,11 @@ public class AsyncPdfExecutor implements AsyncExecutor {
     @Override
     public ExportFileModel getExportFile(String uuid) {
         return this.result.get(uuid);
+    }
+
+    @Override
+    public void onComplete(ParseCompleteListener callBack) {
+        this.parseCompleteListener = callBack;
     }
 
 

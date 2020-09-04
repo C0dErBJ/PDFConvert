@@ -23,4 +23,6 @@ public interface Parser extends Runnable {
     void removeExtractorByOrder(int order);
 
     String getFileName();
+
+    List<Fact> getParsedFacts();
 }
