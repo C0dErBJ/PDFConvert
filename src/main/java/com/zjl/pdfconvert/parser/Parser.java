@@ -1,5 +1,6 @@
 package com.zjl.pdfconvert.parser;
 
+import com.zjl.pdfconvert.executor.ParseCompleteListener;
 import com.zjl.pdfconvert.model.Fact;
 
 import java.io.InputStream;
@@ -25,4 +26,6 @@ public interface Parser extends Runnable {
     String getFileName();
 
     List<Fact> getParsedFacts();
+
+    void onComplete(ParseCompleteListener callBack);
 }

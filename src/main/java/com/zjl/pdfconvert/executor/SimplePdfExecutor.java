@@ -10,10 +10,7 @@ import java.util.List;
  * @author Zhu jialiang
  * @date 2020/8/19
  */
-public class SimplePdfExecutor implements Executor<byte[]> {
-
-    public SimplePdfExecutor() {
-    }
+public class SimplePdfExecutor implements Executor<byte[], Exporter> {
 
     @Override
     public byte[] doExecutor(Parser parser, Exporter exporter) {

@@ -2,8 +2,8 @@ package com.zjl.pdfconvert.web;
 
 import com.zjl.pdfconvert.executor.AsyncExecutor;
 import com.zjl.pdfconvert.exporter.ExportFileModel;
-import com.zjl.pdfconvert.exporter.WordExporter;
-import com.zjl.pdfconvert.parser.PdfParser;
+import com.zjl.pdfconvert.exporter.word.WordExporter;
+import com.zjl.pdfconvert.parser.ContentParser;
 import com.zjl.pdfconvert.util.FileUtil;
 import com.zjl.pdfconvert.web.model.FileType;
 import com.zjl.pdfconvert.web.model.ResponseDto;
@@ -48,7 +48,7 @@ public class FileController {
         DataBufferUtils.write(filePart.content(), outputStream).doOnComplete(() ->
         {
             ByteArrayInputStream bis = new ByteArrayInputStream(outputStream.toByteArray());
-            PdfParser parser = new PdfParser(bis);
+            ContentParser parser = new ContentParser(bis);
             parser.setFileName(filePart.filename());
             WordExporter exporter = new WordExporter();
             exporter.setFileName(FileUtil.trimExt(filePart.filename()));

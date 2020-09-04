@@ -209,9 +209,12 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extrac
             for (COSName fontName : res.getFontNames()) {
                 PDFont font = res.getFont(fontName);
                 if (font != null) {
-                    String[] fName = font.getName().split("\\+");
-                    this.setDefaultFont(fName[fName.length - 1]);
-                    break;
+                    if (font.getName().contains("+")) {
+                        String[] fName = font.getName().split("\\+");
+                        this.setDefaultFont(fName[fName.length - 1]);
+                        break;
+                    }
+
                 }
             }
         }

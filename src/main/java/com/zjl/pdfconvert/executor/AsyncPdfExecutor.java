@@ -1,7 +1,7 @@
 package com.zjl.pdfconvert.executor;
 
+import com.zjl.pdfconvert.exporter.AsyncExporter;
 import com.zjl.pdfconvert.exporter.ExportFileModel;
-import com.zjl.pdfconvert.exporter.Exporter;
 import com.zjl.pdfconvert.model.Fact;
 import com.zjl.pdfconvert.parser.Parser;
 import org.slf4j.Logger;
@@ -24,7 +24,6 @@ public class AsyncPdfExecutor implements AsyncExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncPdfExecutor.class);
     private ThreadPoolExecutor executor;
     private final HashMap<String, ExportFileModel> result = new HashMap<>();
-    private ParseCompleteListener parseCompleteListener;
 
 
     public AsyncPdfExecutor() {
@@ -43,15 +42,13 @@ public class AsyncPdfExecutor implements AsyncExecutor {
     }
 
     @Override
-    public String doExecutor(Parser parser, Exporter exporter) {
+    public String doExecutor(Parser parser, AsyncExporter exporter) {
         BlockingDeque<Fact> factBlockingDeque = new LinkedBlockingDeque<>();
         parser.setFactBlockingDeque(factBlockingDeque);
         exporter.setFactBlockingDeque(factBlockingDeque);
         String uuid = UUID.randomUUID().toString();
         exporter.setUniqueId(uuid);
-        CompletableFuture.runAsync(parser, executor).whenComplete((unused, throwable) -> {
-            this.parseCompleteListener.onComplete(parser.getParsedFacts());
-        });
+        CompletableFuture.runAsync(parser, executor);
         CompletableFuture.runAsync(exporter, executor).whenComplete((unused, throwable) -> {
             byte[] bos = exporter.writeByte();
             Path tempFile = null;
@@ -78,10 +75,7 @@ public class AsyncPdfExecutor implements AsyncExecutor {
         return this.result.get(uuid);
     }
 
-    @Override
-    public void onComplete(ParseCompleteListener callBack) {
-        this.parseCompleteListener = callBack;
-    }
+
 
 
 }

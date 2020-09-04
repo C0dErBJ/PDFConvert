@@ -2,10 +2,11 @@ package com.zjl.pdfconvert;
 
 import com.zjl.pdfconvert.executor.AsyncPdfExecutor;
 import com.zjl.pdfconvert.executor.SimplePdfExecutor;
+import com.zjl.pdfconvert.exporter.AsyncExporter;
 import com.zjl.pdfconvert.exporter.Exporter;
-import com.zjl.pdfconvert.exporter.WordExporter;
+import com.zjl.pdfconvert.exporter.word.WordExporter;
 import com.zjl.pdfconvert.parser.Parser;
-import com.zjl.pdfconvert.parser.PdfParser;
+import com.zjl.pdfconvert.parser.ContentParser;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.util.Assert;
@@ -20,12 +21,12 @@ class PdfconvertApplicationTests {
     void pdfParseSync() throws IOException {
         String importFile = "/test.pdf";
         try (InputStream is = PdfconvertApplicationTests.class.getResourceAsStream(importFile)) {
-            Parser parser = new PdfParser();
+            Parser parser = new ContentParser();
             parser.setInputStream(is);
             Exporter exporter = new WordExporter();
             SimplePdfExecutor executor = new SimplePdfExecutor();
             byte[] result = executor.doExecutor(parser, exporter);
-            Assert.isTrue(result.length > 0, "解析失败");
+            Assert.isTrue(result.length > 0, "瑙ｆ瀽澶辫触");
         }
 
     }
@@ -34,13 +35,10 @@ class PdfconvertApplicationTests {
     void pdfParseASync() throws IOException {
         String importFile = "/test.pdf";
         try (InputStream is = PdfconvertApplicationTests.class.getResourceAsStream(importFile)) {
-            Parser parser = new PdfParser();
+            Parser parser = new ContentParser();
             parser.setInputStream(is);
-            Exporter exporter = new WordExporter();
+            AsyncExporter exporter = new WordExporter();
             AsyncPdfExecutor executor = new AsyncPdfExecutor();
-            executor.onComplete(factList -> {
-                //解析结果
-            });
             String uuid = executor.doExecutor(parser, exporter);
             executor.getExportFile(uuid);
         }

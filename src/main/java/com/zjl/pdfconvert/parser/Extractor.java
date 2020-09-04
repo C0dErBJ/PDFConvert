@@ -18,5 +18,11 @@ public interface Extractor<T extends Fact> {
 
     void clearCache();
 
+    /**
+     * 如果没有特殊处理，则返回本extractor提取的元素
+     *
+     * @param currentFacts 当前所有已经提取的pdf元素
+     * @return 经过pipeline方法处理之后的所有元素
+     */
     List<T> pipeline(List<Fact> currentFacts);
 }
