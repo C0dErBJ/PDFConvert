@@ -9,14 +9,14 @@ public class ResponseDto<T> {
     private String message;
     private T data;
 
-    public static ResponseDto success() {
-        ResponseDto dto = new ResponseDto();
+    public static <T> ResponseDto<T> success() {
+        ResponseDto<T> dto = new ResponseDto<>();
         dto.setResultCode(ResultCode.SUCCESS);
         return dto;
     }
 
-    public static ResponseDto fail() {
-        ResponseDto dto = new ResponseDto();
+    public static <T> ResponseDto<T> fail() {
+        ResponseDto<T> dto = new ResponseDto<>();
         dto.setResultCode(ResultCode.FAIL);
         return dto;
     }

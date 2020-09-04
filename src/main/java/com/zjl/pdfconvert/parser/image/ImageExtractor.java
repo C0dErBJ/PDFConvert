@@ -40,6 +40,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+/**
+ * @author Zhu jialiang
+ */
 public class ImageExtractor extends PDFStreamEngine implements Extractor<Image> {
     private List<Image> images = new ArrayList<>();
     private Integer pageIndex;
@@ -94,14 +97,13 @@ public class ImageExtractor extends PDFStreamEngine implements Extractor<Image> 
                 imageFact.setFile(baos.toByteArray());
 
                 Matrix ctmNew = getGraphicsState().getCurrentTransformationMatrix();
-                float imageXScale = ctmNew.getScalingFactorX();
-                float imageYScale = ctmNew.getScalingFactorY();
                 imageFact.setDisplayWidth(ctmNew.getScalingFactorX());
                 imageFact.setDisplayHeight(ctmNew.getScalingFactorY());
                 Style style = new Style();
                 style.setX((int) ctmNew.getTranslateX());
                 style.setY((int) ctmNew.getTranslateY());
                 imageFact.setStyle(style);
+                imageFact.setPageNo(pageIndex);
                 this.images.add(imageFact);
             } else if (xobject instanceof PDFormXObject) {
                 PDFormXObject form = (PDFormXObject) xobject;

@@ -5,6 +5,7 @@ import com.zjl.pdfconvert.exporter.ExportFileModel;
 import com.zjl.pdfconvert.exporter.WordExporter;
 import com.zjl.pdfconvert.parser.PdfParser;
 import com.zjl.pdfconvert.util.FileUtil;
+import com.zjl.pdfconvert.web.model.FileType;
 import com.zjl.pdfconvert.web.model.ResponseDto;
 import com.zjl.pdfconvert.web.model.ResultCode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,8 +38,8 @@ public class FileController {
     }
 
     @PostMapping(value = "/word", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<ResponseDto> parseWord(@RequestPart("file") FilePart filePart) {
-        ResponseDto result = ResponseDto.fail();
+    public Mono<ResponseDto<String>> parseWord(@RequestPart("file") FilePart filePart) {
+        ResponseDto<String> result = ResponseDto.fail();
         if (!preCheck(filePart.filename())) {
             result.setMessage("请上传pdf文件");
             return Mono.just(result);
@@ -75,9 +76,6 @@ public class FileController {
         if (filenameExt.length < 2) {
             return false;
         }
-        if (!"pdf".equalsIgnoreCase(filenameExt[filenameExt.length - 1])) {
-            return false;
-        }
-        return true;
+        return FileType.PDF.equalsIgnoreCase(filenameExt[filenameExt.length - 1]);
     }
 }

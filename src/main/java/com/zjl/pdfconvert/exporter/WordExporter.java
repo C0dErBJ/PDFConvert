@@ -13,8 +13,13 @@ import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTShd;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STShd;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -23,9 +28,9 @@ import java.util.concurrent.LinkedBlockingDeque;
  * @date 2020/8/17
  */
 public class WordExporter implements Exporter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WordExporter.class);
     private XWPFDocument document = new XWPFDocument();
     private XWPFParagraph currentParagraph;
-    private XWPFRun currentXWPFRun;
     private BlockingDeque<Fact> factBlockingDeque;
     private String uniqueId = "";
     private String fileName;
@@ -75,23 +80,22 @@ public class WordExporter implements Exporter {
         if (this.document.getParagraphs().isEmpty()) {
             currentParagraph = this.document.createParagraph();
         }
-        currentXWPFRun = currentParagraph.createRun();
+        XWPFRun xwpfRun = currentParagraph.createRun();
         if (fact instanceof Word) {
-            System.out.print(((Word) fact).getText());
-            currentXWPFRun.setText(((Word) fact).getText());
-            currentXWPFRun.setBold(((Word) fact).getStyle().isBold());
-            currentXWPFRun.setItalic(((Word) fact).getStyle().isItalics());
-            currentXWPFRun.setColor(((Word) fact).getStyle().getColor());
-            CTShd cTShd = currentXWPFRun.getCTR().addNewRPr().addNewShd();
-            cTShd.setVal(STShd.CLEAR);
-            cTShd.setColor("auto");
-            cTShd.setFill(((Word) fact).getStyle().getBackgroundColor());
-            currentXWPFRun.setFontFamily(((Word) fact).getStyle().getFontFamily().getName());
-            currentXWPFRun.setFontSize((int) ((Word) fact).getStyle().getFontSize());
+            LOGGER.info(((Word) fact).getText());
+            xwpfRun.setText(((Word) fact).getText());
+            xwpfRun.setBold(((Word) fact).getStyle().isBold());
+            xwpfRun.setItalic(((Word) fact).getStyle().isItalics());
+            xwpfRun.setColor(((Word) fact).getStyle().getColor());
+            CTShd ctShd = xwpfRun.getCTR().addNewRPr().addNewShd();
+            ctShd.setVal(STShd.CLEAR);
+            ctShd.setColor("auto");
+            ctShd.setFill(((Word) fact).getStyle().getBackgroundColor());
+            xwpfRun.setFontFamily(((Word) fact).getStyle().getFontFamily().getName());
+            xwpfRun.setFontSize((int) ((Word) fact).getStyle().getFontSize());
         }
         if (fact instanceof LineBreak) {
-            System.out.print("||");
-            //  currentXWPFRun.addCarriageReturn();
+            LOGGER.info("换行");
         }
         if (fact instanceof Table) {
             if (!currentParagraph.isEmpty()) {
@@ -117,20 +121,18 @@ public class WordExporter implements Exporter {
             if (!currentParagraph.isEmpty()) {
                 currentParagraph = this.document.createParagraph();
             }
-            System.out.print("图片");
+            LOGGER.info("图片");
             try {
-                try (ByteArrayInputStream bais = new ByteArrayInputStream(((Image) fact).getFile())) {
-                    XWPFPicture picture = currentXWPFRun.addPicture(bais,
+                try (ByteArrayInputStream basis = new ByteArrayInputStream(((Image) fact).getFile())) {
+                    xwpfRun.addPicture(basis,
                             XWPFDocument.PICTURE_TYPE_PNG,
                             ((Image) fact).getFileName(),
                             Units.toEMU(((Image) fact).getDisplayWidth()),
                             Units.toEMU(((Image) fact).getDisplayHeight()));
 
                 }
-            } catch (InvalidFormatException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (InvalidFormatException | IOException e) {
+                LOGGER.error("转换IO异常", e);
             }
         }
 
@@ -138,30 +140,22 @@ public class WordExporter implements Exporter {
 
     @Override
     public void writeFile(String filePath) {
-        try {
-            FileOutputStream outputStream = new FileOutputStream(filePath);
+        try (FileOutputStream outputStream = new FileOutputStream(filePath)) {
             this.document.write(outputStream);
-            outputStream.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("IO输出异常", e);
         }
     }
 
     @Override
-    public ByteArrayOutputStream writeByte() {
-        ByteArrayOutputStream outputStream = null;
-        try {
-            outputStream = new ByteArrayOutputStream();
+    public byte[] writeByte() {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             this.document.write(outputStream);
-            outputStream.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            return outputStream.toByteArray();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return outputStream;
+        return new byte[0];
     }
 
 
@@ -171,7 +165,6 @@ public class WordExporter implements Exporter {
             Fact fact = this.factBlockingDeque.pollFirst();
             this.doExport(fact);
             if (fact instanceof ArticleEnd) {
-                System.out.println("----------end------------");
                 break;
             }
         }

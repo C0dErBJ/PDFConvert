@@ -31,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.pdfbox.contentstream.operator.color.*;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageTree;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
@@ -68,7 +67,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extrac
     //误差值，文本居中误差
     private static final float VARIANCE = 15f;
     private List<Fact> words = new LinkedList<>();
-    private Deque<Fact> line = new ArrayDeque<>();
+    private final Deque<Fact> line = new ArrayDeque<>();
     private int cursor = 0;
     private float padLeft = 0;
     private float padRight = 0;
@@ -91,7 +90,8 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extrac
     // pdftextstripper.indent
     // pdftextstripper.drop
     static {
-        String strDrop = null, strIndent = null;
+        String strDrop = null,
+                strIndent = null;
         try {
             String className = PDFTextStripper.class.getSimpleName().toLowerCase();
             String prop = className + ".indent";
@@ -273,7 +273,7 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extrac
         TextPosition lastWordOfLine = line.get(line.size() - 1).getTextPositions()
                 .get(line.get(line.size() - 1).getTextPositions().size() - 1);
         //如果最后一个字符不是空格，则不进行增加行首行尾的操作
-        if (!" ".equals(lastWordOfLine.getUnicode())) {
+        if (!wordSeparator.equals(lastWordOfLine.getUnicode())) {
             return;
         }
         if (padLeft == 0 || padRight == 0) {
@@ -374,22 +374,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extrac
         }
     }
 
-
-    /**
-     * This will process all of the pages and the text that is in them.
-     *
-     * @param pages The pages object in the document.
-     * @throws IOException If there is an error parsing the text.
-     */
-    protected void processPages(PDPageTree pages) throws IOException {
-        for (PDPage page : pages) {
-            if (page.hasContents()) {
-                processPage(page);
-            }
-        }
-    }
-
-
     /**
      * This will process the contents of a page.
      *
@@ -398,7 +382,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extrac
      */
     @Override
     public void processPage(PDPage page) throws IOException {
-
         int numberOfArticleSections = 1;
         if (shouldSeparateByBeads) {
             fillBeadRectangles(page);
@@ -455,7 +438,6 @@ public class TextExtractor extends CustomLegacyPDFStreamEngine implements Extrac
             beadRectangles.add(rect);
         }
     }
-
 
 
     private static final float END_OF_LAST_TEXT_X_RESET_VALUE = -1;

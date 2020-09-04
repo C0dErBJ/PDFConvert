@@ -62,7 +62,7 @@ public class PdfParser implements Parser {
     @Override
     public void addExtractor(Extractor extractor) {
         this.extractors.add(extractor);
-        Collections.sort(this.extractors, Comparator.comparing(Extractor::getOrder));
+        this.extractors.sort(Comparator.comparing(Extractor::getOrder));
     }
 
     @Override
@@ -82,8 +82,7 @@ public class PdfParser implements Parser {
         try (PDDocument document = PDDocument.load(this.is)) {
             int pages = document.getNumberOfPages();
             for (int i = 0; i < pages; i++) {
-                for (Iterator<Extractor> it = this.extractors.iterator(); it.hasNext(); ) {
-                    Extractor extractor = it.next();
+                for (Extractor extractor : this.extractors) {
                     extractor.doExtract(document.getPage(i), i);
                     List factList = extractor.pipeline(facts);
                     facts.addAll(factList);

@@ -2,9 +2,7 @@ package com.zjl.pdfconvert.exporter;
 
 import com.zjl.pdfconvert.model.Fact;
 
-import java.io.ByteArrayOutputStream;
 import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.Callable;
 
 /**
  * @author Zhu jialiang
@@ -16,7 +14,7 @@ public interface Exporter extends Runnable {
 
     void writeFile(String filePath);
 
-    ByteArrayOutputStream writeByte();
+    byte[] writeByte();
 
     void setFactBlockingDeque(BlockingDeque<Fact> factBlockingDeque);
 

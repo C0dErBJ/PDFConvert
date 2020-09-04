@@ -44,7 +44,7 @@ public class AppendCellPath extends GraphicsOperatorProcessor {
                 return;
             }
             //标志一个table解析完成
-            if (x1 == 0 && y1 == 0 && this.currentCell.size() > 0) {
+            if (x1 == 0 && y1 == 0 && !this.currentCell.isEmpty()) {
                 this.preCells.put(this.preCells.size(), currentCell);
                 this.currentCell = new LinkedList<>();
                 return;
@@ -74,34 +74,34 @@ public class AppendCellPath extends GraphicsOperatorProcessor {
         return "re";
     }
 
-    public TreeMap<Integer, List<Cell>> getCells() {
+    public SortedMap<Integer, List<Cell>> getCells() {
         TreeMap<Integer, List<Cell>> cells = new TreeMap<>();
         for (int i = 0; i < this.preCells.size(); i++) {
             List<Cell> cell = this.preCells.get(i);
             if (cell.size() < 4) {
                 continue;
             }
-            Collections.sort(cell, (o1, o2) -> o1.getY().equals(o2.getY())
+            cell.sort((o1, o2) -> o1.getY().equals(o2.getY())
                     ? o2.getX().compareTo(o1.getX())
                     : o1.getY().compareTo(o2.getY()));
-            Cell rightbottom = cell.get(0);
-            Cell lefttop = cell.get(cell.size() - 1);
+            Cell rightBottom = cell.get(0);
+            Cell leftTop = cell.get(cell.size() - 1);
 
-            Collections.sort(cell, (o1, o2) -> o1.getY().equals(o2.getY())
+            cell.sort((o1, o2) -> o1.getY().equals(o2.getY())
                     ? o2.getX().compareTo(o1.getX())
                     : o2.getY().compareTo(o1.getY()));
-            Cell righttop = cell.get(0);
-            Cell leftbottom = cell.get(cell.size() - 1);
+            Cell rightTop = cell.get(0);
+            Cell leftBottom = cell.get(cell.size() - 1);
 
-            if (rightbottom.getX().equals(righttop.getX()) && rightbottom.getY().equals(leftbottom.getY())
-                    && leftbottom.getX().equals(lefttop.getX()) && leftbottom.getY().equals(rightbottom.getY())) {
-                Collections.sort(cell, (o1, o2) -> o1.getY().equals(o2.getY())
+            if (rightBottom.getX().equals(rightTop.getX())
+                    && rightBottom.getY().equals(leftBottom.getY())
+                    && leftBottom.getX().equals(leftTop.getX())
+                    && leftBottom.getY().equals(rightBottom.getY())) {
+                cell.sort((o1, o2) -> o1.getY().equals(o2.getY())
                         ? o1.getX().compareTo(o2.getX())
                         : o2.getY().compareTo(o1.getY()));
                 cells.put(cells.size(), cell);
-
             }
-
         }
         return cells;
     }

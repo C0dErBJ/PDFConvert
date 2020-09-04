@@ -25,12 +25,11 @@ import java.util.stream.Collectors;
 public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor<Table> {
     private final GeneralPath linePath = new GeneralPath();
     private List<Table> tables;
-    private TreeMap<Integer, List<Cell>> cells;
-    private static float VARIANCE = 1f;
+    private SortedMap<Integer, List<Cell>> cells;
     private Integer pageIndex;
     private PDPage currentPage;
 
-    private AppendCellPath appendCellPath = new AppendCellPath();
+    private final AppendCellPath appendCellPath = new AppendCellPath();
 
 
     public TableExtractor() {
@@ -43,6 +42,7 @@ public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor
     public Integer getOrder() {
         return 3;
     }
+
     @Override
     public void doExtract(PDPage page, int pageIndex) throws IOException {
         this.pageIndex = pageIndex;
@@ -68,7 +68,7 @@ public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor
             return tables;
         }
         if (!this.hasTable()) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         List<Table> newTables = new ArrayList<>(this.getCells().keySet().size());
@@ -81,7 +81,8 @@ public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor
             table.initTable(cellList, rowCount, columnCount);
             newTables.add(table);
         }
-        return this.tables = newTables;
+        this.tables = newTables;
+        return this.tables;
     }
 
     @Override
@@ -91,10 +92,10 @@ public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor
     }
 
     public List<Fact> concatWordCell(List<Fact> words, int pageNo) {
-        TreeMap<Integer, List<Cell>> cells = this.getCells();
+        SortedMap<Integer, List<Cell>> sortedCells = this.getCells();
         List<Fact> facts = new LinkedList<>();
-        for (int i = 0; i < cells.size(); i++) {
-            List<Cell> cellList = cells.get(i);
+        for (int i = 0; i < sortedCells.size(); i++) {
+            List<Cell> cellList = sortedCells.get(i);
             for (Cell cell : cellList) {
                 List<Word> within = words.stream().filter(a -> a instanceof Word
                         && (((Word) a).getStyle().getAbx() >= cell.getX() && ((Word) a).getStyle().getAbx() <= (cell.getX() + cell.getWidth()))
@@ -114,7 +115,7 @@ public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor
         return facts;
     }
 
-    public TreeMap<Integer, List<Cell>> getCells() {
+    public SortedMap<Integer, List<Cell>> getCells() {
         if (this.cells != null) {
             return this.cells;
         }
@@ -124,56 +125,67 @@ public class TableExtractor extends PDFGraphicsStreamEngine implements Extractor
 
 
     @Override
-    public void appendRectangle(Point2D point2D, Point2D point2D1, Point2D point2D2, Point2D point2D3) throws IOException {
-
+    public void appendRectangle(Point2D point2D, Point2D point2D1, Point2D point2D2, Point2D point2D3) {
+// 不实现
     }
 
     @Override
-    public void drawImage(PDImage pdi) throws IOException {
+    public void drawImage(PDImage pdi) {
+        // 不实现
     }
 
     @Override
-    public void clip(int windingRule) throws IOException {
+    public void clip(int windingRule) {
+        // 不实现
     }
 
     @Override
-    public void moveTo(float x, float y) throws IOException {
+    public void moveTo(float x, float y) {
+        // 不实现
     }
 
     @Override
-    public void lineTo(float x, float y) throws IOException {
+    public void lineTo(float x, float y) {
+        // 不实现
     }
 
     @Override
-    public void curveTo(float x1, float y1, float x2, float y2, float x3, float y3) throws IOException {
+    public void curveTo(float x1, float y1, float x2, float y2, float x3, float y3) {
+        // 不实现
     }
 
     @Override
-    public Point2D getCurrentPoint() throws IOException {
+    public Point2D getCurrentPoint() {
         return linePath.getCurrentPoint();
     }
 
     @Override
-    public void closePath() throws IOException {
+    public void closePath() {
+        // 不实现
     }
 
     @Override
-    public void endPath() throws IOException {
+    public void endPath() {
+        // 不实现
     }
 
     @Override
-    public void strokePath() throws IOException {
+    public void strokePath() {
+        // 不实现
     }
 
     @Override
-    public void fillPath(int windingRule) throws IOException {
+    public void fillPath(int windingRule) {
+        // 不实现
     }
 
     @Override
-    public void fillAndStrokePath(int windingRule) throws IOException {
+    public void fillAndStrokePath(int windingRule) {
+        // 不实现
     }
 
     @Override
-    public void shadingFill(COSName cosn) throws IOException {
+    public void shadingFill(COSName cosn) {
+        // 不实现
     }
 }

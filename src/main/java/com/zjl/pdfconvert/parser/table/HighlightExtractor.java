@@ -14,7 +14,7 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.TreeMap;
+import java.util.SortedMap;
 import java.util.stream.Collectors;
 
 /**
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  */
 public class HighlightExtractor extends PDFGraphicsStreamEngine {
     private final GeneralPath linePath = new GeneralPath();
-    private TreeMap<Integer, List<Cell>> cells;
+    private SortedMap<Integer, List<Cell>> cells;
 
     private AppendCellPath appendCellPath = new AppendCellPath();
 
@@ -52,7 +52,7 @@ public class HighlightExtractor extends PDFGraphicsStreamEngine {
 
 
     public List<Fact> highlightWord(List<Fact> words, int pageNo) {
-        TreeMap<Integer, List<Cell>> cells = this.getCells();
+        SortedMap<Integer, List<Cell>> cells = this.getCells();
         List<Fact> facts = new LinkedList<>();
         for (int i = 0; i < cells.size(); i++) {
             List<Cell> cellList = cells.get(i);
@@ -75,7 +75,7 @@ public class HighlightExtractor extends PDFGraphicsStreamEngine {
         return facts;
     }
 
-    public TreeMap<Integer, List<Cell>> getCells() {
+    public SortedMap<Integer, List<Cell>> getCells() {
         if (this.cells != null) {
             return this.cells;
         }

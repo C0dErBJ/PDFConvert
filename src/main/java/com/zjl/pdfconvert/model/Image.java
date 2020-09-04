@@ -1,7 +1,5 @@
 package com.zjl.pdfconvert.model;
 
-import java.io.InputStream;
-
 /**
  * @author Zhu jialiang
  * @date 2020/8/17
