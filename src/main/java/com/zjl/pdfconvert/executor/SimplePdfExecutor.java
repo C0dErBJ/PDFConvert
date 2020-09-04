@@ -12,15 +12,12 @@ import java.util.List;
  */
 public class SimplePdfExecutor implements Executor<byte[]> {
 
-    private final Parser pdfParser;
-
-    public SimplePdfExecutor(Parser parser) {
-        this.pdfParser = parser;
+    public SimplePdfExecutor() {
     }
 
     @Override
     public byte[] doExecutor(Parser parser, Exporter exporter) {
-        List<Fact> facts = this.pdfParser.doParse();
+        List<Fact> facts = parser.doParse();
         for (Fact fact : facts) {
             exporter.doExport(fact);
         }

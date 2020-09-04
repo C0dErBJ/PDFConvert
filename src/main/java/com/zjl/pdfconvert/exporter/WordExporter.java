@@ -82,7 +82,6 @@ public class WordExporter implements Exporter {
         }
         XWPFRun xwpfRun = currentParagraph.createRun();
         if (fact instanceof Word) {
-            LOGGER.info(((Word) fact).getText());
             xwpfRun.setText(((Word) fact).getText());
             xwpfRun.setBold(((Word) fact).getStyle().isBold());
             xwpfRun.setItalic(((Word) fact).getStyle().isItalics());
@@ -95,7 +94,7 @@ public class WordExporter implements Exporter {
             xwpfRun.setFontSize((int) ((Word) fact).getStyle().getFontSize());
         }
         if (fact instanceof LineBreak) {
-            LOGGER.info("换行");
+          // 换行处理
         }
         if (fact instanceof Table) {
             if (!currentParagraph.isEmpty()) {

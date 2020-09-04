@@ -36,22 +36,28 @@ public class PdfParser implements Parser {
     }
 
     public PdfParser() {
+        this.init();
     }
 
-    public PdfParser(InputStream is) {
-        this.is = is;
-    }
-
-
-    @Override
-    public void setFactBlockingDeque(BlockingDeque<Fact> factBlockingDeque) {
-        this.factBlockingDeque = factBlockingDeque;
+    private void init() {
         this.extractors = new LinkedList<>();
         TextExtractor textExtractor = new TextExtractor();
         textExtractor.setSortByPosition(true);
         this.extractors.add(textExtractor);
         this.extractors.add(new ImageExtractor());
         this.extractors.add(new TableExtractor());
+    }
+
+    public PdfParser(InputStream is) {
+        this.is = is;
+        this.init();
+
+    }
+
+
+    @Override
+    public void setFactBlockingDeque(BlockingDeque<Fact> factBlockingDeque) {
+        this.factBlockingDeque = factBlockingDeque;
     }
 
     @Override
